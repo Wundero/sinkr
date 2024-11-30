@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "sinkr"
+version = "0.1.0"
+description = ""
+authors = ["Wundero <Wundero@users.noreply.github.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+requests = "^2.32.3"
+websockets = "^14.1"
+ruff = "^0.8.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
