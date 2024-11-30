@@ -1,3 +1,27 @@
 packages:
   - "apps/*"
   - "packages/*"
+  - "tooling/*"
+
+catalog:
+  zod: ^3.23.8
+  "@types/node": ^22.10.1
+  typescript: ^5.7.2
+  eslint: ^9.15.0
+  prettier: ^3.4.1
+  crossws: ^0.3.1
+  emittery: ^1.0.3
+  undici: ^7.0.0
+
+catalogs:
+  react18:
+    react: ^18.3.1
+    react-dom: ^18.3.1
+    "@types/react-dom": ^18.3.1
+    "@types/react": ^18.3.12
+
+  react19:
+    react-dom: 19.0.0-rc-66855b96-20241106
+    react: 19.0.0-rc-66855b96-20241106
+    "@types/react-dom": "npm:types-react-dom@rc"
+    "@types/react": "npm:types-react@rc"

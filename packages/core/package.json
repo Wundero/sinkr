@@ -1,0 +1,33 @@
+{
+  "name": "@sinkr/core",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "license": "MIT",
+  "scripts": {
+    "clean": "git clean -xdf .turbo dist node_modules",
+    "format": "prettier --check . --ignore-path ../../.gitignore",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@sinkr/eslint-config": "workspace:*",
+    "@sinkr/prettier-config": "workspace:*",
+    "@sinkr/tsconfig": "workspace:*",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
+    "typescript": "catalog:"
+  },
+  "prettier": "@sinkr/prettier-config",
+  "dependencies": {
+    "@sinkr/validators": "workspace:*",
+    "crossws": "catalog:",
+    "emittery": "catalog:",
+    "undici": "catalog:",
+    "zod": "^3.23.8"
+  }
+}

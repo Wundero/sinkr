@@ -1,0 +1,10 @@
+{
+  "extends": ["@sinkr/tsconfig/base.json"],
+  "compilerOptions": {
+    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json",
+    "types": ["@cloudflare/workers-types", "node"],
+    "resolveJsonModule": true
+  },
+  "include": ["worker-configuration.d.ts", "src/**/*.ts"],
+  "exclude": ["node_modules"]
+}

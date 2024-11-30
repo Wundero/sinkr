@@ -8,12 +8,15 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\""
   },
   "devDependencies": {
-    "prettier": "^3.2.5",
+    "@sinkr/prettier-config": "workspace:*",
+    "@turbo/gen": "^2.3.3",
+    "prettier": "catalog:",
     "turbo": "^2.3.3",
-    "typescript": "5.5.4"
+    "typescript": "catalog:"
   },
-  "packageManager": "pnpm@9.0.0",
+  "packageManager": "pnpm@9.14.0",
   "engines": {
-    "node": ">=18"
-  }
+    "node": ">=22.11"
+  },
+  "prettier": "@sinkr/prettier-config"
 }

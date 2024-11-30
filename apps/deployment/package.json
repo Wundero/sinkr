@@ -1,0 +1,31 @@
+{
+  "name": "deployment",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "start": "wrangler dev",
+    "cf-typegen": "wrangler types"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241127.0",
+    "@sinkr/eslint-config": "workspace:*",
+    "@sinkr/prettier-config": "workspace:*",
+    "@sinkr/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "drizzle-kit": "^0.28.1",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
+    "typescript": "catalog:",
+    "wrangler": "^3.91.0"
+  },
+  "prettier": "@sinkr/prettier-config",
+  "dependencies": {
+    "@sinkr/validators": "workspace:*",
+    "crossws": "catalog:",
+    "drizzle-orm": "^0.36.4",
+    "uuid": "^11.0.3"
+  }
+}
