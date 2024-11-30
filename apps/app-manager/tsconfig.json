@@ -1,0 +1,21 @@
+{
+  "extends": "@sinkr/tsconfig/base.json",
+  "compilerOptions": {
+    "lib": ["es2022", "dom", "dom.iterable"],
+    "jsx": "preserve",
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["./src/*"]
+    },
+    "types": ["./.wrangler/types/runtime.d.ts"],
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json",
+    "module": "esnext"
+  },
+  "include": [".", "src/app/.well-known/**/*.ts", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
