@@ -69,6 +69,8 @@ function proxyRemoveEmit<T extends Emittery<any>>(emitter: T) {
 class BrowserSinker extends Emittery<EventMapWithDefaults> {
   private ws: WebSocket | null = null;
 
+  private channelCache = new Map<string, WeakRef<Channel | PresenceChannel>>();
+
   constructor(private url: string) {
     super();
   }
@@ -80,10 +82,20 @@ class BrowserSinker extends Emittery<EventMapWithDefaults> {
   channel(channel: `presence-${string}`): PresenceChannel;
   channel(channel: string): Channel;
   channel(channel: string) {
-    if (channel.startsWith("presence-")) {
-      return proxyRemoveEmit(new PresenceSinker(this, channel));
+    const cached = this.channelCache.get(channel)?.deref();
+    if (cached) {
+      return cached;
     }
-    return proxyRemoveEmit(new ChannelSinker(this, channel));
+    if (channel.startsWith("presence-")) {
+      const newChannel = proxyRemoveEmit(new PresenceSinker(this, channel));
+      const ref = new WeakRef(newChannel);
+      this.channelCache.set(channel, ref);
+      return newChannel;
+    }
+    const newChannel = proxyRemoveEmit(new ChannelSinker(this, channel));
+    const ref = new WeakRef(newChannel);
+    this.channelCache.set(channel, ref);
+    return newChannel;
   }
 
   /**
