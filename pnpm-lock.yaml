@@ -348,13 +348,13 @@ importers:
   packages/react:
     dependencies:
       '@sinkr/core':
-        specifier: workspace:*
-        version: link:../core
+        specifier: npm:@jsr/sinkr__core@0.1.0
+        version: '@jsr/sinkr__core@0.1.0'
       react:
-        specifier: ^18.3.1 || ^19.0.0
+        specifier: ^18.3.1
         version: 18.3.1
       react-dom:
-        specifier: ^18.3.1 || ^19.0.0
+        specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
     devDependencies:
       '@sinkr/eslint-config':
@@ -367,10 +367,10 @@ importers:
         specifier: workspace:*
         version: link:../../tooling/typescript
       '@types/react':
-        specifier: ^18.3.12 || ^19.0.0
+        specifier: ^18.3.12
         version: 18.3.12
       '@types/react-dom':
-        specifier: ^18.3.1 || ^19.0.0
+        specifier: ^18.3.1
         version: 18.3.1
       eslint:
         specifier: 'catalog:'
@@ -1316,6 +1316,9 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
+
+  '@jsr/sinkr__core@0.1.0':
+    resolution: {integrity: sha512-T4wqT14l3YebXEZ4M7E9iiOQOv9JprT71FQwYbzSXZ9pWHYHSeYRsA2RXIRwojdk6t67pYTkzR/69tehmHfPjA==, tarball: https://npm.jsr.io/~/11/@jsr/sinkr__core/0.1.0.tgz}
 
   '@jsr/sinkr__validators@0.1.0':
     resolution: {integrity: sha512-AJ8Z0Mtjaco5s/L59VXLCn5nkPBNY3KpXDbNkwcZIChZspZp4DNZ4oXv9yJ8oRcbyqu95YGhRZF7mrG9Cjsd8Q==, tarball: https://npm.jsr.io/~/11/@jsr/sinkr__validators/0.1.0.tgz}
@@ -5565,6 +5568,13 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
+
+  '@jsr/sinkr__core@0.1.0':
+    dependencies:
+      '@jsr/sinkr__validators': 0.1.0
+      emittery: 1.0.3
+      undici: 7.0.0
+      zod: 3.23.8
 
   '@jsr/sinkr__validators@0.1.0':
     dependencies:
