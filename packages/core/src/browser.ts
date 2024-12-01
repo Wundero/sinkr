@@ -320,8 +320,8 @@ export function sink(options: SinkOptions = {}): Sinker {
   const appId = options.appId ?? process.env.SINKR_APP_ID;
   try {
     const parsedUrl = new URL(url);
-    if (parsedUrl.protocol !== "ws" && parsedUrl.protocol !== "wss") {
-      throw new Error("Invalid URL provided for Sinkr!");
+    if (parsedUrl.protocol !== "ws:" && parsedUrl.protocol !== "wss:") {
+      parsedUrl.protocol = "wss:";
     }
     if (parsedUrl.pathname === "/") {
       parsedUrl.pathname = `/${appId}`;

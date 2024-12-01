@@ -10,6 +10,7 @@ python = "^3.12"
 requests = "^2.32.3"
 websockets = "^14.1"
 ruff = "^0.8.1"
+nanoid = "^2.0.0"
 
 
 [build-system]
