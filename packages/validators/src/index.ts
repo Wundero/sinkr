@@ -1,147 +1,65 @@
-import { z } from "zod";
+import {
+  AuthenticateRouteSchema as authenticateRouteSchema,
+  BroadcastMessageSchema as broadcastMessageSchema,
+  ChannelMemberSchema as channelMemberSchema,
+  ChannelMessageSchema as channelMessageSchema,
+  ClientCountChannelSchema as clientCountChannelSchema,
+  ClientInitSchema as clientInitSchema,
+  ClientJoinPresenceChannelSchema as clientJoinPresenceChannelSchema,
+  ClientLeaveChannelSchema as clientLeaveChannelSchema,
+  ClientLeavePresenceChannelSchema as clientLeavePresenceChannelSchema,
+  ClientNewMemberSchema as clientNewMemberSchema,
+  ClientReceiveMessageSchema as clientReceiveMessageSchema,
+  ClientReceiveMetadataSchema as clientReceiveMetadataSchema,
+  ClientReceiveSchema as clientReceiveSchema,
+  DirectMessageSchema as directMessageSchema,
+  ServerEndpointSchema as serverEndpointSchema,
+  StreamedBroadcastMessageSchema as streamedBroadcastMessageSchema,
+  StreamedChannelMessageSchema as streamedChannelMessageSchema,
+  StreamedDirectMessageSchema as streamedDirectMessageSchema,
+  StreamedServerEndpointSchema as streamedServerEndpointSchema,
+  SubscribeRouteSchema as subscribeRouteSchema,
+  UnsubscribeRouteSchema as unsubscribeRouteSchema,
+} from "./schemas";
 
-export const AuthenticateRouteSchema = z.object({
-  route: z.literal("authenticate"),
-  peerId: z.string(),
-  id: z.string(),
-  userInfo: z.unknown(),
-});
-
-export const SubscribeRouteSchema = z.object({
-  route: z.literal("subscribe"),
-  subscriberId: z.string(),
-  channel: z.string(),
-});
-
-export const UnsubscribeRouteSchema = z.object({
-  route: z.literal("unsubscribe"),
-  subscriberId: z.string(),
-  channel: z.string(),
-});
-
-export const ChannelMessageSchema = z.object({
-  route: z.literal("channel"),
-  channel: z.string(),
-  event: z.string(),
-  message: z.unknown(),
-});
-
-export const DirectMessageSchema = z.object({
-  route: z.literal("direct"),
-  recipientId: z.string(),
-  event: z.string(),
-  message: z.unknown(),
-});
-
-export const BroadcastMessageSchema = z.object({
-  route: z.literal("broadcast"),
-  event: z.string(),
-  message: z.unknown(),
-});
-
-export const StreamedChannelMessageSchema = z.object({
-  route: z.literal("channel"),
-  channel: z.string(),
-  event: z.string(),
-});
-
-export const StreamedDirectMessageSchema = z.object({
-  route: z.literal("direct"),
-  recipientId: z.string(),
-  event: z.string(),
-});
-
-export const StreamedBroadcastMessageSchema = z.object({
-  route: z.literal("broadcast"),
-  event: z.string(),
-});
-
-export const StreamedServerEndpointSchema = z.discriminatedUnion("route", [
-  StreamedChannelMessageSchema,
-  StreamedDirectMessageSchema,
-  StreamedBroadcastMessageSchema,
-]);
-
-export const ServerEndpointSchema = z.discriminatedUnion("route", [
-  AuthenticateRouteSchema,
-  SubscribeRouteSchema,
-  UnsubscribeRouteSchema,
-  ChannelMessageSchema,
-  DirectMessageSchema,
-  BroadcastMessageSchema,
-]);
-
-export const ClientCountChannelSchema = z.object({
-  event: z.literal("count"),
-  channel: z.string(),
-  count: z.number(),
-});
-
-export const ClientInitSchema = z.object({
-  event: z.literal("init"),
-  peerId: z.string(),
-});
-
-export const ChannelMemberSchema = z.object({
-  id: z.string(),
-  userInfo: z.unknown(),
-});
-
-export const ClientJoinPresenceChannelSchema = z.object({
-  event: z.literal("join-presence-channel"),
-  channel: z.string(),
-  members: z.array(ChannelMemberSchema),
-});
-
-export const ClientLeaveChannelSchema = z.object({
-  event: z.literal("leave-channel"),
-  channel: z.string(),
-});
-
-export const ClientNewMemberSchema = z.object({
-  event: z.literal("member-join"),
-  channel: z.string(),
-  member: ChannelMemberSchema,
-});
-
-export const ClientLeavePresenceChannelSchema = z.object({
-  event: z.literal("member-leave"),
-  channel: z.string(),
-  member: ChannelMemberSchema,
-});
-
-export const ClientReceiveMetadataSchema = z.discriminatedUnion("event", [
-  ClientInitSchema,
-  ClientCountChannelSchema,
-  ClientJoinPresenceChannelSchema,
-  ClientNewMemberSchema,
-  ClientLeavePresenceChannelSchema,
-  ClientLeaveChannelSchema,
-]);
-
-export const ClientReceiveMessageSchema = z.object({
-  event: z.string(),
-  from: z.discriminatedUnion("source", [
-    z.object({
-      source: z.enum(["direct", "broadcast"]),
-    }),
-    z.object({
-      source: z.literal("channel"),
-      channel: z.string(),
-    }),
-  ]),
-  message: z.unknown(),
-});
-
-export const ClientReceiveSchema = z.discriminatedUnion("source", [
-  z.object({
-    source: z.literal("metadata"),
-    data: ClientReceiveMetadataSchema,
-  }),
-  z.object({
-    source: z.literal("message"),
-    data: ClientReceiveMessageSchema,
-  }),
-]);
-
-export type ClientReception = z.infer<typeof ClientReceiveSchema>;
+export const AuthenticateRouteSchema: typeof authenticateRouteSchema =
+  authenticateRouteSchema;
+export const SubscribeRouteSchema: typeof subscribeRouteSchema =
+  subscribeRouteSchema;
+export const UnsubscribeRouteSchema: typeof unsubscribeRouteSchema =
+  unsubscribeRouteSchema;
+export const ChannelMessageSchema: typeof channelMessageSchema =
+  channelMessageSchema;
+export const DirectMessageSchema: typeof directMessageSchema =
+  directMessageSchema;
+export const BroadcastMessageSchema: typeof broadcastMessageSchema =
+  broadcastMessageSchema;
+export const StreamedChannelMessageSchema: typeof streamedChannelMessageSchema =
+  streamedChannelMessageSchema;
+export const StreamedDirectMessageSchema: typeof streamedDirectMessageSchema =
+  streamedDirectMessageSchema;
+export const StreamedBroadcastMessageSchema: typeof streamedBroadcastMessageSchema =
+  streamedBroadcastMessageSchema;
+export const StreamedServerEndpointSchema: typeof streamedServerEndpointSchema =
+  streamedServerEndpointSchema;
+export const ServerEndpointSchema: typeof serverEndpointSchema =
+  serverEndpointSchema;
+export const ClientCountChannelSchema: typeof clientCountChannelSchema =
+  clientCountChannelSchema;
+export const ClientInitSchema: typeof clientInitSchema = clientInitSchema;
+export const ChannelMemberSchema: typeof channelMemberSchema =
+  channelMemberSchema;
+export const ClientJoinPresenceChannelSchema: typeof clientJoinPresenceChannelSchema =
+  clientJoinPresenceChannelSchema;
+export const ClientLeaveChannelSchema: typeof clientLeaveChannelSchema =
+  clientLeaveChannelSchema;
+export const ClientNewMemberSchema: typeof clientNewMemberSchema =
+  clientNewMemberSchema;
+export const ClientLeavePresenceChannelSchema: typeof clientLeavePresenceChannelSchema =
+  clientLeavePresenceChannelSchema;
+export const ClientReceiveMetadataSchema: typeof clientReceiveMetadataSchema =
+  clientReceiveMetadataSchema;
+export const ClientReceiveMessageSchema: typeof clientReceiveMessageSchema =
+  clientReceiveMessageSchema;
+export const ClientReceiveSchema: typeof clientReceiveSchema =
+  clientReceiveSchema;
