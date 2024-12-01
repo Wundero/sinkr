@@ -144,22 +144,24 @@ export default {
           });
           const peerIdSet = new Set();
           dbPeers.forEach((p) => peerIdSet.add(p.id));
-          await streamChunks(reader, (message) => {
-            peers.forEach((peer) => {
-              if (peerIdSet.has(peer.id)) {
-                sendToPeer(peer, {
-                  source: "message",
-                  data: {
-                    event: data.event,
-                    from: {
-                      source: "broadcast",
+          ctx.waitUntil(
+            streamChunks(reader, (message) => {
+              peers.forEach((peer) => {
+                if (peerIdSet.has(peer.id)) {
+                  sendToPeer(peer, {
+                    source: "message",
+                    data: {
+                      event: data.event,
+                      from: {
+                        source: "broadcast",
+                      },
+                      message,
                     },
-                    message,
-                  },
-                });
-              }
-            });
-          });
+                  });
+                }
+              });
+            }),
+          );
           return new Response("OK", { status: 200 });
         }
         case "channel": {
@@ -172,24 +174,26 @@ export default {
                 ),
             });
           const peers = getPeerMap();
-          await streamChunks(reader, (message) => {
-            subscriptions.forEach((sub) => {
-              const peer = peers.get(sub.peerId);
-              if (peer) {
-                sendToPeer(peer, {
-                  source: "message",
-                  data: {
-                    event: data.event,
-                    from: {
-                      source: "channel",
-                      channel: data.channel,
+          ctx.waitUntil(
+            streamChunks(reader, (message) => {
+              subscriptions.forEach((sub) => {
+                const peer = peers.get(sub.peerId);
+                if (peer) {
+                  sendToPeer(peer, {
+                    source: "message",
+                    data: {
+                      event: data.event,
+                      from: {
+                        source: "channel",
+                        channel: data.channel,
+                      },
+                      message,
                     },
-                    message,
-                  },
-                });
-              }
-            });
-          });
+                  });
+                }
+              });
+            }),
+          );
           return new Response("OK", { status: 200 });
         }
         case "direct": {
@@ -210,18 +214,20 @@ export default {
           if (!peer) {
             return new Response("Not found", { status: 404 });
           }
-          await streamChunks(reader, (message) => {
-            sendToPeer(peer, {
-              source: "message",
-              data: {
-                event: data.event,
-                from: {
-                  source: "direct",
+          ctx.waitUntil(
+            streamChunks(reader, (message) => {
+              sendToPeer(peer, {
+                source: "message",
+                data: {
+                  event: data.event,
+                  from: {
+                    source: "direct",
+                  },
+                  message,
                 },
-                message,
-              },
-            });
-          });
+              });
+            }),
+          );
           return new Response("OK", { status: 200 });
         }
       }
