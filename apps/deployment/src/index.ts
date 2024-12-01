@@ -75,17 +75,38 @@ function transformRequestStream(body: ReadableStream) {
   return body.pipeThrough(transformer);
 }
 
-async function streamChunks(
+function unblockedResponse(
+  ctx: ExecutionContext,
   body: ReadableStreamDefaultReader<unknown>,
   onMessageChunk: (chunk: unknown) => void | Promise<void>,
-) {
-  while (true) {
-    const nextChunk = await body.read();
-    if (nextChunk.done) {
-      break;
-    }
-    await onMessageChunk(nextChunk.value);
-  }
+): Promise<Response> {
+  return new Promise<Response>((resolve) => {
+    const daemonPromise = new Promise<void>((res, rej) => {
+      const outputStream = new ReadableStream({
+        async pull(controller) {
+          const nextChunk = await body.read();
+          if (nextChunk.done) {
+            controller.close();
+            res();
+            return;
+          }
+          try {
+            await onMessageChunk(nextChunk.value);
+            controller.enqueue("OK");
+          } catch (e) {
+            controller.error(e);
+            rej(e);
+          }
+        },
+      });
+      resolve(
+        new Response(outputStream, {
+          status: 200,
+        }),
+      );
+    });
+    ctx.waitUntil(daemonPromise);
+  });
 }
 
 export default {
@@ -144,25 +165,22 @@ export default {
           });
           const peerIdSet = new Set();
           dbPeers.forEach((p) => peerIdSet.add(p.id));
-          ctx.waitUntil(
-            streamChunks(reader, (message) => {
-              peers.forEach((peer) => {
-                if (peerIdSet.has(peer.id)) {
-                  sendToPeer(peer, {
-                    source: "message",
-                    data: {
-                      event: data.event,
-                      from: {
-                        source: "broadcast",
-                      },
-                      message,
+          return unblockedResponse(ctx, reader, (message) => {
+            peers.forEach((peer) => {
+              if (peerIdSet.has(peer.id)) {
+                sendToPeer(peer, {
+                  source: "message",
+                  data: {
+                    event: data.event,
+                    from: {
+                      source: "broadcast",
                     },
-                  });
-                }
-              });
-            }),
-          );
-          return new Response("OK", { status: 200 });
+                    message,
+                  },
+                });
+              }
+            });
+          });
         }
         case "channel": {
           const subscriptions =
@@ -174,27 +192,24 @@ export default {
                 ),
             });
           const peers = getPeerMap();
-          ctx.waitUntil(
-            streamChunks(reader, (message) => {
-              subscriptions.forEach((sub) => {
-                const peer = peers.get(sub.peerId);
-                if (peer) {
-                  sendToPeer(peer, {
-                    source: "message",
-                    data: {
-                      event: data.event,
-                      from: {
-                        source: "channel",
-                        channel: data.channel,
-                      },
-                      message,
+          return unblockedResponse(ctx, reader, (message) => {
+            subscriptions.forEach((sub) => {
+              const peer = peers.get(sub.peerId);
+              if (peer) {
+                sendToPeer(peer, {
+                  source: "message",
+                  data: {
+                    event: data.event,
+                    from: {
+                      source: "channel",
+                      channel: data.channel,
                     },
-                  });
-                }
-              });
-            }),
-          );
-          return new Response("OK", { status: 200 });
+                    message,
+                  },
+                });
+              }
+            });
+          });
         }
         case "direct": {
           const dbPeer = await db.query.peers.findFirst({
@@ -214,21 +229,18 @@ export default {
           if (!peer) {
             return new Response("Not found", { status: 404 });
           }
-          ctx.waitUntil(
-            streamChunks(reader, (message) => {
-              sendToPeer(peer, {
-                source: "message",
-                data: {
-                  event: data.event,
-                  from: {
-                    source: "direct",
-                  },
-                  message,
+          return unblockedResponse(ctx, reader, (message) => {
+            sendToPeer(peer, {
+              source: "message",
+              data: {
+                event: data.event,
+                from: {
+                  source: "direct",
                 },
-              });
-            }),
-          );
-          return new Response("OK", { status: 200 });
+                message,
+              },
+            });
+          });
         }
       }
     }
