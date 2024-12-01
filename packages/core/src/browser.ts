@@ -15,7 +15,7 @@ import type {
 } from "@sinkr/validators";
 import { ClientReceiveSchema } from "@sinkr/validators";
 
-import type { EventMap, UserInfo } from ".";
+import type { EventMap, UserInfo } from "./index";
 import {
   connectSymbol,
   countEventSymbol,
@@ -25,7 +25,7 @@ import {
   leaveEventSymbol,
   memberJoinEventSymbol,
   memberLeaveEventSymbol,
-} from ".";
+} from "./index";
 
 type Prettify<T> = {
   [K in keyof T]: T[K];

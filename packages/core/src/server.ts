@@ -7,7 +7,7 @@ import type {
   StreamedServerEndpointSchema,
 } from "@sinkr/validators";
 
-import type { EventMap, UserInfo } from ".";
+import type { EventMap, UserInfo } from "./index";
 
 type SendDataParam =
   | z.infer<typeof ServerEndpointSchema>
