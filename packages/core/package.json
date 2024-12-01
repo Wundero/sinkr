@@ -24,9 +24,9 @@
   "prettier": "@sinkr/prettier-config",
   "dependencies": {
     "@sinkr/validators": "workspace:*",
-    "crossws": "catalog:",
-    "emittery": "catalog:",
-    "undici": "catalog:",
+    "crossws": "^0.3.1",
+    "emittery": "^1.0.3",
+    "undici": "^7.0.0",
     "zod": "^3.23.8"
   }
 }

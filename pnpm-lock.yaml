@@ -12,9 +12,6 @@ catalogs:
     crossws:
       specifier: ^0.3.1
       version: 0.3.1
-    emittery:
-      specifier: ^1.0.3
-      version: 1.0.3
     eslint:
       specifier: ^9.15.0
       version: 9.16.0
@@ -24,9 +21,6 @@ catalogs:
     typescript:
       specifier: ^5.7.2
       version: 5.7.2
-    undici:
-      specifier: ^7.0.0
-      version: 7.0.0
 
 importers:
 
@@ -320,13 +314,13 @@ importers:
         specifier: workspace:*
         version: link:../validators
       crossws:
-        specifier: 'catalog:'
+        specifier: ^0.3.1
         version: 0.3.1
       emittery:
-        specifier: 'catalog:'
+        specifier: ^1.0.3
         version: 1.0.3
       undici:
-        specifier: 'catalog:'
+        specifier: ^7.0.0
         version: 7.0.0
       zod:
         specifier: ^3.23.8
