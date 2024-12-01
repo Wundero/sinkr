@@ -11,6 +11,7 @@ export const apps = sqliteTable(
   "app",
   {
     id: text().primaryKey().$default(v7),
+    name: text().notNull(),
     secretKey: text().unique().notNull(),
     enabled: integer({ mode: "boolean" }).default(true),
   },
