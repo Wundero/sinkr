@@ -67,7 +67,7 @@ class Sourcerer {
     if (parsedUrl.pathname === "/" && appId) {
       parsedUrl.pathname = `/${appId}`;
     }
-    if (parsedUrl.protocol !== "ws" && parsedUrl.protocol !== "wss") {
+    if (parsedUrl.protocol !== "https") {
       throw new Error("Invalid URL provided for Sourcerer!");
     }
     if (parsedUrl.pathname === "/") {
