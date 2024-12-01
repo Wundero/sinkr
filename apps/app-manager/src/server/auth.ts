@@ -29,7 +29,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       profile(profile) {
         let role: "USER" | "ADMIN" = "USER";
         switch (profile.login) {
-          case "wundero": // Change this to your GitHub username
+          case "Wundero": // Change this to your GitHub username
             role = "ADMIN";
             break;
           default:
