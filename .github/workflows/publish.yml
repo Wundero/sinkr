@@ -22,8 +22,6 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install
       - run: npx jsr publish
-        working-directory: ./packages/validators
-      - run: npx jsr publish
         working-directory: ./packages/core
       - run: npx jsr publish
         working-directory: ./packages/react
