@@ -164,7 +164,7 @@ class ChannelSinker extends Emittery<ChannelEventMap> {
   /**
    * The current count of connected clients to the channel.
    */
-  get count() {
+  get count(): number {
     return this._count;
   }
 
@@ -223,14 +223,14 @@ class PresenceSinker extends Emittery<PresenceChannelEventMap> {
   /**
    * The current members of the presence channel.
    */
-  get members() {
+  get members(): PresenceMember[] {
     return [...this._members];
   }
 
   /**
    * The current count of members in the presence channel.
    */
-  get memberCount() {
+  get memberCount(): number {
     return this._members.length;
   }
 

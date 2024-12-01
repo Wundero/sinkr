@@ -22,7 +22,11 @@ export interface SinkrProviderProps {
  *
  * All children of this provider can call `useSinkr` or `useSinkrChannel` to get an event listener for the sink.
  */
-export function SinkrProvider({ url, appId, children }: SinkrProviderProps) {
+export function SinkrProvider({
+  url,
+  appId,
+  children,
+}: SinkrProviderProps): React.JSX.Element {
   const memoizedSink = useMemo(() => {
     return sink({
       url,
@@ -40,7 +44,7 @@ export function SinkrProvider({ url, appId, children }: SinkrProviderProps) {
 /**
  * Get an event listener for all events.
  */
-export function useSinkr() {
+export function useSinkr(): Sinker | null {
   const context = React.useContext(SinkrContext);
   if (!context) {
     return null;

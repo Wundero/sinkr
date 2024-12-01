@@ -117,7 +117,7 @@ class Sourcerer {
       id: string;
       userInfo: UserInfo;
     },
-  ) {
+  ): Promise<number> {
     return await this.sendData({
       route: "authenticate",
       id: userInfo.id,
@@ -132,7 +132,7 @@ class Sourcerer {
    * @param channel The channel to subscribe to.
    * @returns The HTTP status code Sinkr returned.
    */
-  async subscribeToChannel(userId: string, channel: string) {
+  async subscribeToChannel(userId: string, channel: string): Promise<number> {
     return await this.sendData({
       route: "subscribe",
       subscriberId: userId,
@@ -146,7 +146,10 @@ class Sourcerer {
    * @param channel The channel to unsubscribe from.
    * @returns The HTTP status code Sinkr returned.
    */
-  async unsubscribeFromChannel(userId: string, channel: string) {
+  async unsubscribeFromChannel(
+    userId: string,
+    channel: string,
+  ): Promise<number> {
     return await this.sendData({
       route: "unsubscribe",
       subscriberId: userId,
@@ -164,7 +167,7 @@ class Sourcerer {
   async sendToChannel<
     TEvent extends keyof EventMap,
     TData extends EventMap[TEvent],
-  >(channel: string, event: TEvent, message: TData) {
+  >(channel: string, event: TEvent, message: TData): Promise<number> {
     return await this.sendData({
       route: "channel",
       channel,
@@ -183,7 +186,11 @@ class Sourcerer {
   async streamToChannel<
     TEvent extends keyof EventMap,
     TData extends EventMap[TEvent],
-  >(channel: string, event: TEvent, stream: ReadableStream<TData>) {
+  >(
+    channel: string,
+    event: TEvent,
+    stream: ReadableStream<TData>,
+  ): Promise<number> {
     return await this.sendData(
       {
         route: "channel",
@@ -204,7 +211,7 @@ class Sourcerer {
   async directMessage<
     TEvent extends keyof EventMap,
     TData extends EventMap[TEvent],
-  >(userId: string, event: TEvent, message: TData) {
+  >(userId: string, event: TEvent, message: TData): Promise<number> {
     return await this.sendData({
       route: "direct",
       recipientId: userId,
@@ -223,7 +230,11 @@ class Sourcerer {
   async streamDirectMessage<
     TEvent extends keyof EventMap,
     TData extends EventMap[TEvent],
-  >(userId: string, event: TEvent, stream: ReadableStream<TData>) {
+  >(
+    userId: string,
+    event: TEvent,
+    stream: ReadableStream<TData>,
+  ): Promise<number> {
     return await this.sendData(
       {
         route: "direct",
@@ -243,7 +254,7 @@ class Sourcerer {
   async broadcastMessage<
     TEvent extends keyof EventMap,
     TData extends EventMap[TEvent],
-  >(event: TEvent, message: TData) {
+  >(event: TEvent, message: TData): Promise<number> {
     return await this.sendData({
       route: "broadcast",
       event: `${event}`,
@@ -260,7 +271,7 @@ class Sourcerer {
   async streamBroadcastMessage<
     TEvent extends keyof EventMap,
     TData extends EventMap[TEvent],
-  >(event: TEvent, stream: ReadableStream<TData>) {
+  >(event: TEvent, stream: ReadableStream<TData>): Promise<number> {
     return await this.sendData(
       {
         route: "broadcast",
@@ -270,6 +281,8 @@ class Sourcerer {
     );
   }
 }
+
+export type SinkrSource = Sourcerer;
 
 /**
  * Create a Sinkr source to send messages.
@@ -285,7 +298,7 @@ export function source({
   url?: string;
   appKey?: string;
   appId?: string;
-} = {}) {
+} = {}): SinkrSource {
   if (!url) {
     throw new Error("Unable to start Sourcerer without a url!");
   }
