@@ -1,3 +1,4 @@
+/* eslint-disable turbo/no-undeclared-env-vars */
 import type { z } from "zod";
 import Emittery from "emittery";
 import { WebSocket } from "undici";
@@ -72,6 +73,10 @@ class BrowserSinker extends Emittery<EventMapWithDefaults> {
     super();
   }
 
+  /**
+   * Get a sinkr channel by name. If a presence channel is specified, alternative types and messages will be available.
+   * @param channel The channel to listen to. Events will only fire if the current client is subscribed to the channel.
+   */
   channel(channel: `presence-${string}`): PresenceChannel;
   channel(channel: string): Channel;
   channel(channel: string) {
@@ -81,6 +86,9 @@ class BrowserSinker extends Emittery<EventMapWithDefaults> {
     return proxyRemoveEmit(new ChannelSinker(this, channel));
   }
 
+  /**
+   * Connect to the Sinkr server.
+   */
   connect() {
     if (this.ws) {
       this.ws.close();
@@ -141,6 +149,9 @@ type ChannelEventMap = Prettify<DefaultChannelEventMap & EventMap>;
 class ChannelSinker extends Emittery<ChannelEventMap> {
   private _count = 0;
 
+  /**
+   * The current count of connected clients to the channel.
+   */
   get count() {
     return this._count;
   }
@@ -177,6 +188,9 @@ class ChannelSinker extends Emittery<ChannelEventMap> {
 
 type ChannelNoEmit = Omit<ChannelSinker, "emit" | "emitSerial">;
 
+/**
+ * A member of a presence channel.
+ */
 export type PresenceMember = Prettify<
   Omit<z.infer<typeof ChannelMemberSchema>, "userInfo"> & { userInfo: UserInfo }
 >;
@@ -194,10 +208,16 @@ type PresenceChannelEventMap = Prettify<
 class PresenceSinker extends Emittery<PresenceChannelEventMap> {
   private _members: PresenceMember[] = [];
 
+  /**
+   * The current members of the presence channel.
+   */
   get members() {
     return [...this._members];
   }
 
+  /**
+   * The current count of members in the presence channel.
+   */
   get memberCount() {
     return this._members.length;
   }
@@ -248,22 +268,43 @@ class PresenceSinker extends Emittery<PresenceChannelEventMap> {
 
 type PresenceNoEmit = Omit<PresenceSinker, "emit" | "emitSerial">;
 
+/**
+ * Global Sinkr client for the browser. Fires all events received.
+ */
 export type Sinker = Prettify<Omit<BrowserSinker, "emit" | "emitSerial">>;
+/**
+ * A Sinkr channel for the browser. Fires all events received for the specified channel.
+ */
 export type Channel = Prettify<ChannelNoEmit>;
+/**
+ * A Sinkr presence channel for the browser. Fires all events received for the specified presence channel.
+ */
 export type PresenceChannel = Prettify<PresenceNoEmit>;
 
+/**
+ * Sinkr initialization options.
+ */
 export interface SinkOptions {
+  /**
+   * The Sinkr url to connect to.
+   */
   url?: string;
+  /**
+   * The Sinkr app to use.
+   */
   appId?: string;
 }
 
+/**
+ * Connect to a Sinkr server over websockets.
+ * @param options The connection options to use.
+ * @returns The connected Sinkr client.
+ */
 export function sink(options: SinkOptions = {}): Sinker {
-  // eslint-disable-next-line turbo/no-undeclared-env-vars
   const url = options.url ?? process.env.SINKR_URL;
   if (!url) {
     throw new Error("Unable to start Sinkr without a url!");
   }
-  // eslint-disable-next-line turbo/no-undeclared-env-vars
   const appId = options.appId ?? process.env.SINKR_APP_ID;
   try {
     const parsedUrl = new URL(url);
