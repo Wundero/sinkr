@@ -348,32 +348,17 @@ importers:
         specifier: 'catalog:'
         version: 5.7.2
 
-  packages/next:
-    dependencies:
-      '@sinkr/react':
-        specifier: workspace:^
-        version: link:../react
-    devDependencies:
-      '@sinkr/eslint-config':
-        specifier: workspace:*
-        version: link:../../tooling/eslint
-      '@sinkr/prettier-config':
-        specifier: workspace:*
-        version: link:../../tooling/prettier
-      '@sinkr/tsconfig':
-        specifier: workspace:*
-        version: link:../../tooling/typescript
-      eslint:
-        specifier: 'catalog:'
-        version: 9.16.0(jiti@1.21.6)
-      prettier:
-        specifier: 'catalog:'
-        version: 3.4.1
-      typescript:
-        specifier: 'catalog:'
-        version: 5.7.2
-
   packages/react:
+    dependencies:
+      '@sinkr/core':
+        specifier: workspace:*
+        version: link:../core
+      react:
+        specifier: ^18.3.1 || ^19.0.0
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.1 || ^19.0.0
+        version: 18.3.1(react@18.3.1)
     devDependencies:
       '@sinkr/eslint-config':
         specifier: workspace:*
@@ -384,6 +369,12 @@ importers:
       '@sinkr/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/typescript
+      '@types/react':
+        specifier: ^18.3.12 || ^19.0.0
+        version: 18.3.12
+      '@types/react-dom':
+        specifier: ^18.3.1 || ^19.0.0
+        version: 18.3.1
       eslint:
         specifier: 'catalog:'
         version: 9.16.0(jiti@1.21.6)
@@ -1706,7 +1697,7 @@ packages:
   '@radix-ui/react-id@1.1.0':
     resolution: {integrity: sha512-EJUrI8yYh7WOjNOqpoJaf1jlFIH2LvtgAl+YcFqNCa+4hj64ZXmPkAKOFs/ukjz3byN6bdb/AVUqHkI8/uWWMA==}
     peerDependencies:
-      '@types/react': npm:types-react@rc
+      '@types/react': '*'
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
     peerDependenciesMeta:
       '@types/react':

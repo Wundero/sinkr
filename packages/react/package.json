@@ -17,9 +17,16 @@
     "@sinkr/eslint-config": "workspace:*",
     "@sinkr/prettier-config": "workspace:*",
     "@sinkr/tsconfig": "workspace:*",
+    "@types/react": "^18.3.12 || ^19.0.0",
+    "@types/react-dom": "^18.3.1 || ^19.0.0",
     "eslint": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:"
   },
-  "prettier": "@sinkr/prettier-config"
+  "prettier": "@sinkr/prettier-config",
+  "dependencies": {
+    "@sinkr/core": "workspace:*",
+    "react": "^18.3.1 || ^19.0.0",
+    "react-dom": "^18.3.1 || ^19.0.0"
+  }
 }

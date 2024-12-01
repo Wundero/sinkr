@@ -1,13 +1,14 @@
 {
   "extends": "@sinkr/tsconfig/base.json",
   "compilerOptions": {
-    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json"
+    "lib": ["dom", "dom.iterable", "ES2022"],
+    "jsx": "preserve",
+    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json",
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["src/*"]
+    }
   },
-  "include": [
-    "*.ts",
-    "src"
-  ],
-  "exclude": [
-    "node_modules"
-  ]
+  "include": ["*.ts", "src"],
+  "exclude": ["node_modules"]
 }
