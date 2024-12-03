@@ -7,6 +7,43 @@ import { apps } from "~/server/db/schema";
 import { protectedProcedure } from "../trpc";
 
 export const mainRouter = {
+  listApps: protectedProcedure
+    .input(
+      z.object({
+        enabled: z.boolean().nullish(),
+        cursor: z.string().nullish(),
+        limit: z.number().min(1).max(100).default(10),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      if (ctx.auth.user.role !== "ADMIN") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+        });
+      }
+      const appList = await ctx.db.query.apps.findMany({
+        where: (t, ops) =>
+          ops.and(
+            ...(input.enabled === undefined || input.enabled === null
+              ? []
+              : [ops.eq(t.enabled, input.enabled)]),
+            ops.gt(t.id, input.cursor ?? ""),
+          ),
+        orderBy: (t, ops) => ops.asc(t.id),
+        limit: input.limit + 1,
+      });
+      let nextCursor: string | null = null;
+      if (appList.length > input.limit) {
+        const nextItem = appList.pop();
+        if (nextItem) {
+          nextCursor = nextItem.id;
+        }
+      }
+      return {
+        nextCursor,
+        items: appList,
+      };
+    }),
   createApp: protectedProcedure
     .input(z.object({ name: z.string().min(1).max(64) }))
     .mutation(async ({ ctx, input }) => {

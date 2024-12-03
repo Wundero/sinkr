@@ -16,7 +16,7 @@ export const apps = sqliteTable(
     enabled: integer({ mode: "boolean" }).default(true),
   },
   (app) => ({
-    secIdx: index("secIdx").on(app.secretKey),
+    app_secIdx: index("secIdx").on(app.secretKey),
   }),
 );
 
@@ -35,9 +35,9 @@ export const peers = sqliteTable(
     }),
   },
   (peer) => ({
-    appIdx: index("appIdx").on(peer.appId),
-    authIdx: index("authIdx").on(peer.authenticatedUserId),
-    unique: uniqueIndex("unique").on(peer.id, peer.appId),
+    peer_appIdx: index("appIdx").on(peer.appId),
+    peer_authIdx: index("authIdx").on(peer.authenticatedUserId),
+    peer_unique: uniqueIndex("unique").on(peer.id, peer.appId),
   }),
 );
 
@@ -58,10 +58,10 @@ export const peerChannelSubscriptions = sqliteTable(
     channel: text().notNull(),
   },
   (peerChannelSubscription) => ({
-    channelIdx: index("channelIdx").on(peerChannelSubscription.channel),
-    appIdx: index("appIdx").on(peerChannelSubscription.appId),
-    peerIdx: index("peerIdx").on(peerChannelSubscription.peerId),
-    unique: uniqueIndex("unique").on(
+    pcs_channelIdx: index("channelIdx").on(peerChannelSubscription.channel),
+    pcs_appIdx: index("appIdx").on(peerChannelSubscription.appId),
+    pcs_peerIdx: index("peerIdx").on(peerChannelSubscription.peerId),
+    pcs_unique: uniqueIndex("unique").on(
       peerChannelSubscription.appId,
       peerChannelSubscription.peerId,
       peerChannelSubscription.channel,

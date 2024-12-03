@@ -15,24 +15,23 @@ To deploy your own Sinkr instance, follow these steps:
    2. Run `pnpm wrangler login` to authenticate Wrangler
    3. Run `pnpm wrangler d1 create <your-database-name>` to create a D1 database.
       1. Copy the resulting database info (ID and name) into **BOTH** `apps/app-manager/wrangler.toml` AND `apps/deployment/wrangler.toml`
-   4. In Cloudflare, create a new API token with `d1:write`
-   5. Add the following environment variables to your environment:
+   4. Run `pnpm wrangler d1 execute <your-database-name> --file setup.sql --remote` and confirm.
+   5. Add the following environment variables to a `.env` file:
       1. `CLOUDFLARE_ACCOUNT_ID`: your Cloudflare account ID
       2. `CLOUDFLARE_DATABASE_ID`: the Database ID of your D1 databasae
       3. `CLOUDFLARE_D1_TOKEN`: the API token created in step 4
-   6. Run `pnpm drizzle-kit push` to push the database schema to your database
-   7. Update `apps/app-manager/src/server/auth.ts:32` to add your own GitHub login as an administrator
-   8. Add the following Cloudflare secrets:
+   6. Update `apps/app-manager/src/server/auth.ts:32` to add your own GitHub login as an administrator
+   7.  Add the following Cloudflare secrets:
       1. Run `pnpm wrangler secret put AUTH_SECRET`
       2. Paste a random, securely generated string of characters. I recommend using `openssl rand -base64 32`
       3. Run `pnpm wrangler secret put AUTH_GITHUB_ID`
       4. Paste your GitHub OAuth client ID from the app created in step 3
       5. Run `pnpm wrangler secret put AUTH_GITHUB_SECRET`
       6. Paste your GitHub OAuth client secret from the app created in step 3
-   9. Run `pnpm deploy` to deploy your App Manager
-   10. Run `cd ../deployment`
-   11. Run `pnpm deploy` to deploy your Websocket manager
-   12. Link your app manager and worker to your domain. 
+   8.  Run `pnpm run deploy` to deploy your App Manager
+   9.  Run `cd ../deployment`
+   10. Run `pnpm run deploy` to deploy your Websocket manager
+   11. Link your app manager and worker to your domain. 
        1. Make sure the subdomain you choose for your app manager matches the url you put into GitHub
 6. Install the SDK in your app code
    1. For TypeScript apps of any kind, simply install `@sinkr/core` from JSR.

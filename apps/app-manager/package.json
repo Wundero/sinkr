@@ -12,6 +12,7 @@
     "cf-typegen": "wrangler types --env-interface CloudflareEnv env.d.ts --experimental-include-runtime"
   },
   "dependencies": {
+    "@auth/d1-adapter": "^1.7.4",
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-accordion": "^1.2.1",
     "@radix-ui/react-alert-dialog": "^1.1.2",
@@ -71,7 +72,9 @@
   },
   "prettier": "@sinkr/prettier-config",
   "devDependencies": {
+    "@auth/core": "^0.37.4",
     "@cloudflare/workers-types": "^4.20241127.0",
+    "@miniflare/d1": "^2.14.4",
     "@opennextjs/cloudflare": "^0.2.1",
     "@sinkr/eslint-config": "workspace:*",
     "@sinkr/prettier-config": "workspace:*",

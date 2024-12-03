@@ -1,6 +1,9 @@
 import type { DefaultSession } from "next-auth";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import NextAuth from "next-auth";
 import GitHub from "next-auth/providers/github";
+
+import { CustomD1Adapter } from "./db/adapter";
 
 declare module "next-auth" {
   /**
@@ -23,33 +26,26 @@ declare module "next-auth" {
   }
 }
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
-  providers: [
-    GitHub({
-      profile(profile) {
-        let role: "USER" | "ADMIN" = "USER";
-        switch (profile.login) {
-          case "Wundero": // Change this to your GitHub username
-            role = "ADMIN";
-            break;
-          default:
-            break;
-        }
-        return { ...profile, id: `${profile.id}`, role };
+export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
+  const ctx = await getCloudflareContext();
+  const db = ctx.env.DATABASE;
+
+  return {
+    session: {
+      strategy: "database",
+    },
+    providers: [
+      GitHub({
+        checks: ["none"],
+      }),
+    ],
+    trustHost: true,
+    adapter: CustomD1Adapter(db),
+    callbacks: {
+      session({ session, user }) {
+        session.user.role = user.role;
+        return session;
       },
-    }),
-  ],
-  callbacks: {
-    jwt({ token, user }) {
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      if (user) {
-        token.role = user.role;
-      }
-      return token;
     },
-    session({ session, token }) {
-      session.user.role = token.role === "ADMIN" ? "ADMIN" : "USER";
-      return session;
-    },
-  },
+  } as const;
 });
