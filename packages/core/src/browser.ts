@@ -119,7 +119,11 @@ class BrowserSinker extends Emittery<EventMapWithDefaults> {
     });
     this.ws.addEventListener("message", (event) => {
       const dat = event.data as unknown;
-      const parsed = ClientReceiveSchema.safeParse(dat);
+      if (typeof dat !== "string") {
+        console.error("Received non-string message", dat);
+        return;
+      }
+      const parsed = ClientReceiveSchema.safeParse(JSON.parse(dat));
       if (!parsed.success) {
         console.error("Failed to parse message", parsed.error, event.data);
         this.ws?.close();
