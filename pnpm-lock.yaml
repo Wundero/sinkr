@@ -6,6 +6,12 @@ settings:
 
 catalogs:
   default:
+    '@types/node':
+      specifier: ^22.10.1
+      version: 22.10.1
+    crossws:
+      specifier: ^0.3.1
+      version: 0.3.1
     eslint:
       specifier: ^9.15.0
       version: 9.16.0
@@ -279,6 +285,9 @@ importers:
       uuid:
         specifier: ^11.0.3
         version: 11.0.3
+      zod:
+        specifier: ^3.23.8
+        version: 3.23.8
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^4.20241127.0
