@@ -85,6 +85,8 @@ class Sourcerer {
       const res = await fetch(this.url, {
         method: "POST",
         body: encodedStream,
+        // @ts-expect-error Non-standard API.
+        duplex: "half",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${this.appKey}`,
