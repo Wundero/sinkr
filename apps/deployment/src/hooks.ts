@@ -21,6 +21,7 @@ export const hooks = {
     }
   },
   async close(peer) {
+    console.log(`ON CLOSE: ${peer.id}`);
     const db = getDB();
     const connectedChannels = await db.query.peerChannelSubscriptions.findMany({
       where: (pcs, ops) => ops.eq(pcs.peerId, peer.id),
@@ -72,6 +73,7 @@ export const hooks = {
     }
   },
   async open(peer) {
+    console.log(`ON OPEN: ${peer.id}`);
     try {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const url = new URL(peer.request!.url!);

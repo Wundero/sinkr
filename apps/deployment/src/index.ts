@@ -17,104 +17,13 @@ export class $DurableObject extends DurableObject {
     ws.handleDurableInit(this, ctx, env);
   }
 
-  fetch(request: Request) {
-    return ws.handleDurableUpgrade(this, request);
-  }
+  async fetch(request: Request) {
+    console.log("On durable object fetch");
 
-  webSocketMessage(client: WebSocket, message: string | ArrayBuffer) {
-    return ws.handleDurableMessage(this, client, message);
-  }
-
-  webSocketClose(
-    client: WebSocket,
-    code: number,
-    reason: string,
-    wasClean: boolean,
-  ) {
-    return ws.handleDurableClose(this, client, code, reason, wasClean);
-  }
-}
-
-function transformRequestStream(body: ReadableStream) {
-  const transformer = new TransformStream<unknown, unknown>({
-    transform(chunk, controller) {
-      if (typeof chunk === "string") {
-        try {
-          const parsed = JSON.parse(chunk) as unknown;
-          controller.enqueue(parsed);
-        } catch (e) {
-          controller.error(e);
-        }
-        return;
-      }
-      if (typeof chunk !== "object") {
-        return controller.error(new Error("Invalid chunk"));
-      }
-      if (chunk instanceof ArrayBuffer) {
-        const decoded = new TextDecoder().decode(chunk);
-        try {
-          const parsed = JSON.parse(decoded) as unknown;
-          controller.enqueue(parsed);
-        } catch (e) {
-          controller.error(e);
-        }
-        return;
-      }
-      if (chunk instanceof Buffer) {
-        const decoded = chunk.toString("utf-8");
-        try {
-          const parsed = JSON.parse(decoded) as unknown;
-          controller.enqueue(parsed);
-        } catch (e) {
-          controller.error(e);
-        }
-        return;
-      }
-    },
-  });
-  return body.pipeThrough(transformer);
-}
-
-function unblockedResponse(
-  ctx: ExecutionContext,
-  body: ReadableStreamDefaultReader<unknown>,
-  onMessageChunk: (chunk: unknown) => void | Promise<void>,
-): Promise<Response> {
-  return new Promise<Response>((resolve) => {
-    const daemonPromise = new Promise<void>((res, rej) => {
-      const outputStream = new ReadableStream({
-        async pull(controller) {
-          const nextChunk = await body.read();
-          if (nextChunk.done) {
-            controller.close();
-            res();
-            return;
-          }
-          try {
-            await onMessageChunk(nextChunk.value);
-            controller.enqueue("OK");
-          } catch (e) {
-            controller.error(e);
-            rej(e);
-          }
-        },
-      });
-      resolve(
-        new Response(outputStream, {
-          status: 200,
-        }),
-      );
-    });
-    ctx.waitUntil(daemonPromise);
-  });
-}
-
-export default {
-  async fetch(request, env, ctx): Promise<Response> {
-    init(env);
-    if (request.headers.get("upgrade") === "websocket") {
-      return ws.handleUpgrade(request, env, ctx);
+    if (request.headers.get("Upgrade") === "websocket") {
+      return ws.handleDurableUpgrade(this, request);
     }
+
     const reqUrl = new URL(request.url);
     const [_, appId] = reqUrl.pathname.split("/");
     if (!appId) {
@@ -165,7 +74,7 @@ export default {
           });
           const peerIdSet = new Set();
           dbPeers.forEach((p) => peerIdSet.add(p.id));
-          return unblockedResponse(ctx, reader, (message) => {
+          return unblockedResponse(this.ctx, reader, (message) => {
             peers.forEach((peer) => {
               if (peerIdSet.has(peer.id)) {
                 sendToPeer(peer, {
@@ -192,7 +101,7 @@ export default {
                 ),
             });
           const peers = getPeerMap();
-          return unblockedResponse(ctx, reader, (message) => {
+          return unblockedResponse(this.ctx, reader, (message) => {
             subscriptions.forEach((sub) => {
               const peer = peers.get(sub.peerId);
               if (peer) {
@@ -229,7 +138,7 @@ export default {
           if (!peer) {
             return new Response("Not found", { status: 404 });
           }
-          return unblockedResponse(ctx, reader, (message) => {
+          return unblockedResponse(this.ctx, reader, (message) => {
             sendToPeer(peer, {
               source: "message",
               data: {
@@ -519,5 +428,101 @@ export default {
       }
     }
     return new Response("Not found", { status: 404 });
+  }
+
+  webSocketMessage(client: WebSocket, message: string | ArrayBuffer) {
+    console.log("On durable object message");
+    return ws.handleDurableMessage(this, client, message);
+  }
+
+  webSocketClose(
+    client: WebSocket,
+    code: number,
+    reason: string,
+    wasClean: boolean,
+  ) {
+    console.log("On durable object close");
+    return ws.handleDurableClose(this, client, code, reason, wasClean);
+  }
+}
+
+function transformRequestStream(body: ReadableStream) {
+  const transformer = new TransformStream<unknown, unknown>({
+    transform(chunk, controller) {
+      if (typeof chunk === "string") {
+        try {
+          const parsed = JSON.parse(chunk) as unknown;
+          controller.enqueue(parsed);
+        } catch (e) {
+          controller.error(e);
+        }
+        return;
+      }
+      if (typeof chunk !== "object") {
+        return controller.error(new Error("Invalid chunk"));
+      }
+      if (chunk instanceof ArrayBuffer) {
+        const decoded = new TextDecoder().decode(chunk);
+        try {
+          const parsed = JSON.parse(decoded) as unknown;
+          controller.enqueue(parsed);
+        } catch (e) {
+          controller.error(e);
+        }
+        return;
+      }
+      if (chunk instanceof Buffer) {
+        const decoded = chunk.toString("utf-8");
+        try {
+          const parsed = JSON.parse(decoded) as unknown;
+          controller.enqueue(parsed);
+        } catch (e) {
+          controller.error(e);
+        }
+        return;
+      }
+    },
+  });
+  return body.pipeThrough(transformer);
+}
+
+function unblockedResponse(
+  ctx: DurableObjectState,
+  body: ReadableStreamDefaultReader<unknown>,
+  onMessageChunk: (chunk: unknown) => void | Promise<void>,
+): Promise<Response> {
+  return new Promise<Response>((resolve) => {
+    const daemonPromise = new Promise<void>((res, rej) => {
+      const outputStream = new ReadableStream({
+        async pull(controller) {
+          const nextChunk = await body.read();
+          if (nextChunk.done) {
+            controller.close();
+            res();
+            return;
+          }
+          try {
+            await onMessageChunk(nextChunk.value);
+            controller.enqueue("OK");
+          } catch (e) {
+            controller.error(e);
+            rej(e);
+          }
+        },
+      });
+      resolve(
+        new Response(outputStream, {
+          status: 200,
+        }),
+      );
+    });
+    ctx.waitUntil(daemonPromise);
+  });
+}
+
+export default {
+  async fetch(request, env, ctx): Promise<Response> {
+    init(env);
+    return ws.handleUpgrade(request, env, ctx);
   },
 } satisfies ExportedHandler<Env>;

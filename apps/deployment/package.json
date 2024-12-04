@@ -25,6 +25,7 @@
     "@sinkr/validators": "workspace:*",
     "crossws": "catalog:",
     "drizzle-orm": "^0.36.4",
-    "uuid": "^11.0.3"
+    "uuid": "^11.0.3",
+    "zod": "^3.23.8"
   }
 }
