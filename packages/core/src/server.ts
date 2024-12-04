@@ -19,10 +19,8 @@ function preludeAndEncodeStream(
 ) {
   const reader = stream.getReader();
   const morphedUnencodedStream = new ReadableStream<unknown>({
-    start(controller) {
+    async start(controller) {
       controller.enqueue(prelude);
-    },
-    async pull(controller) {
       try {
         const { done, value } = await reader.read();
         if (done) {
