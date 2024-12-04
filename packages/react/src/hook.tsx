@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useEffect } from "react";
 
 import type { Channel, EventMap, PresenceChannel, Sinker } from "@sinkr/core";
 import { sink } from "@sinkr/core";
@@ -27,15 +27,23 @@ export function SinkrProvider({
   appId,
   children,
 }: SinkrProviderProps): React.JSX.Element {
-  const memoizedSink = useMemo(() => {
-    return sink({
-      url,
-      appId,
-    });
-  }, [url, appId]);
+  const [sinkState, setSink] = React.useState<Sinker | null>(null);
+
+  useEffect(() => {
+    const sk = sink({ url, appId });
+    setSink(sk);
+    sk.connect();
+    return () => {
+      sk.disconnect();
+    };
+  }, [appId, url]);
+
+  if (!sinkState) {
+    return <>{children}</>;
+  }
 
   return (
-    <SinkrContext.Provider value={{ sink: memoizedSink }}>
+    <SinkrContext.Provider value={{ sink: sinkState }}>
       {children}
     </SinkrContext.Provider>
   );
