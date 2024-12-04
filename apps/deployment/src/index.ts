@@ -10,6 +10,24 @@ import { peerChannelSubscriptions, peers } from "./db/schema";
 import { getPeerMap, getPeers, sendToPeer, ws } from "./server";
 import { getDB, init, requiresAuthentication } from "./utils";
 
+function splitJsonObjects(json: string) {
+  let brCount = 0;
+  const out: string[] = [];
+  let lastStart = 0;
+  for (let i = 0; i < json.length; i++) {
+    if (json[i] === "{") {
+      brCount++;
+    } else if (json[i] === "}") {
+      brCount--;
+    }
+    if (brCount === 0) {
+      out.push(json.slice(lastStart, i + 1));
+      lastStart = i + 1;
+    }
+  }
+  return out;
+}
+
 export class $DurableObject extends DurableObject {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -52,6 +70,7 @@ export class $DurableObject extends DurableObject {
     }
     const shouldStream = request.headers.get("X-Sinkr-Stream") === "true";
     if (shouldStream) {
+      console.log("Streaming request", request.body);
       if (!request.body) {
         return new Response("Invalid request", { status: 400 });
       }
@@ -59,10 +78,12 @@ export class $DurableObject extends DurableObject {
       const reader = transformed.getReader();
       const prelude = await reader.read();
       if (prelude.done) {
+        console.log("No prelude");
         return new Response("Invalid request", { status: 400 });
       }
       const parsed = StreamedServerEndpointSchema.safeParse(prelude.value);
       if (!parsed.success) {
+        console.log("Invalid prelude", parsed.error);
         return new Response("Invalid request", { status: 400 });
       }
       const data = parsed.data;
@@ -451,8 +472,11 @@ function transformRequestStream(body: ReadableStream) {
     transform(chunk, controller) {
       if (typeof chunk === "string") {
         try {
-          const parsed = JSON.parse(chunk) as unknown;
-          controller.enqueue(parsed);
+          const split = splitJsonObjects(chunk);
+          split.forEach((c) => {
+            const parsed = JSON.parse(c) as unknown;
+            controller.enqueue(parsed);
+          });
         } catch (e) {
           controller.error(e);
         }
@@ -461,11 +485,14 @@ function transformRequestStream(body: ReadableStream) {
       if (typeof chunk !== "object") {
         return controller.error(new Error("Invalid chunk"));
       }
-      if (chunk instanceof ArrayBuffer) {
+      if (chunk instanceof ArrayBuffer || chunk instanceof Uint8Array) {
         const decoded = new TextDecoder().decode(chunk);
         try {
-          const parsed = JSON.parse(decoded) as unknown;
-          controller.enqueue(parsed);
+          const split = splitJsonObjects(decoded);
+          split.forEach((c) => {
+            const parsed = JSON.parse(c) as unknown;
+            controller.enqueue(parsed);
+          });
         } catch (e) {
           controller.error(e);
         }
@@ -474,13 +501,17 @@ function transformRequestStream(body: ReadableStream) {
       if (chunk instanceof Buffer) {
         const decoded = chunk.toString("utf-8");
         try {
-          const parsed = JSON.parse(decoded) as unknown;
-          controller.enqueue(parsed);
+          const split = splitJsonObjects(decoded);
+          split.forEach((c) => {
+            const parsed = JSON.parse(c) as unknown;
+            controller.enqueue(parsed);
+          });
         } catch (e) {
           controller.error(e);
         }
         return;
       }
+      controller.error(new Error("Invalid chunk"));
     },
   });
   return body.pipeThrough(transformer);
@@ -522,7 +553,6 @@ function unblockedResponse(
 
 export default {
   async fetch(request, env, ctx): Promise<Response> {
-    init(env);
     return ws.handleUpgrade(request, env, ctx);
   },
 } satisfies ExportedHandler<Env>;
