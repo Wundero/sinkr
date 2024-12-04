@@ -95,7 +95,7 @@ export class $DurableObject extends DurableObject {
           });
           const peerIdSet = new Set();
           dbPeers.forEach((p) => peerIdSet.add(p.id));
-          return unblockedResponse(this.ctx, reader, (message) => {
+          return unblockedResponse(reader, (message) => {
             peers.forEach((peer) => {
               if (peerIdSet.has(peer.id)) {
                 sendToPeer(peer, {
@@ -122,7 +122,7 @@ export class $DurableObject extends DurableObject {
                 ),
             });
           const peers = getPeerMap();
-          return unblockedResponse(this.ctx, reader, (message) => {
+          return unblockedResponse(reader, (message) => {
             subscriptions.forEach((sub) => {
               const peer = peers.get(sub.peerId);
               if (peer) {
@@ -159,7 +159,7 @@ export class $DurableObject extends DurableObject {
           if (!peer) {
             return new Response("Not found", { status: 404 });
           }
-          return unblockedResponse(this.ctx, reader, (message) => {
+          return unblockedResponse(reader, (message) => {
             sendToPeer(peer, {
               source: "message",
               data: {
@@ -517,37 +517,19 @@ function transformRequestStream(body: ReadableStream) {
   return body.pipeThrough(transformer);
 }
 
-function unblockedResponse(
-  ctx: DurableObjectState,
+async function unblockedResponse(
   body: ReadableStreamDefaultReader<unknown>,
   onMessageChunk: (chunk: unknown) => void | Promise<void>,
-): Promise<Response> {
-  return new Promise<Response>((resolve) => {
-    const daemonPromise = new Promise<void>((res, rej) => {
-      const outputStream = new ReadableStream({
-        async pull(controller) {
-          const nextChunk = await body.read();
-          if (nextChunk.done) {
-            controller.close();
-            res();
-            return;
-          }
-          try {
-            await onMessageChunk(nextChunk.value);
-            controller.enqueue("OK");
-          } catch (e) {
-            controller.error(e);
-            rej(e);
-          }
-        },
-      });
-      resolve(
-        new Response(outputStream, {
-          status: 200,
-        }),
-      );
-    });
-    ctx.waitUntil(daemonPromise);
+) {
+  while (true) {
+    const { done, value } = await body.read();
+    if (done) {
+      break;
+    }
+    await onMessageChunk(value);
+  }
+  return new Response("OK", {
+    status: 200,
   });
 }
 
