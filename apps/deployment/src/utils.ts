@@ -1,32 +1,22 @@
-import { AsyncLocalStorage } from "async_hooks";
 import { drizzle } from "drizzle-orm/d1";
 
 import * as schema from "./db/schema";
 
 type DrizzleDB = ReturnType<typeof drizzle<typeof schema>>;
 
-interface Ctx {
-  _db: D1Database;
-  db: DrizzleDB;
-}
-
-const globalCtx = new AsyncLocalStorage<Ctx>();
+let db: DrizzleDB | null = null;
 
 export function init(env: Env) {
-  globalCtx.enterWith({
-    _db: env.DATABASE,
-    db: drizzle(env.DATABASE, {
-      schema,
-    }),
+  db ??= drizzle(env.DATABASE, {
+    schema,
   });
 }
 
 export function getDB() {
-  const ctx = globalCtx.getStore();
-  if (!ctx) {
-    throw new Error("No context found");
+  if (!db) {
+    throw new Error("DB not initialized");
   }
-  return ctx.db;
+  return db;
 }
 
 export function requiresAuthentication(channelName: string) {
