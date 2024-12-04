@@ -1,10 +1,12 @@
 {
   "name": "@sinkr/core",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "main": "src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./client": "./src/index.client.ts",
+    "./server": "./src/index.server.ts"
   },
   "license": "MIT",
   "scripts": {
@@ -17,6 +19,7 @@
     "@sinkr/eslint-config": "workspace:*",
     "@sinkr/prettier-config": "workspace:*",
     "@sinkr/tsconfig": "workspace:*",
+    "@types/node": "^22.10.1",
     "eslint": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:"
@@ -24,9 +27,7 @@
   "prettier": "@sinkr/prettier-config",
   "dependencies": {
     "@sinkr/validators": "npm:@jsr/sinkr__validators@0.1.0",
-    "crossws": "^0.3.1",
     "emittery": "^1.0.3",
-    "undici": "^7.0.0",
     "zod": "^3.23.8"
   }
 }

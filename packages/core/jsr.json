@@ -1,6 +1,10 @@
 {
     "name": "@sinkr/core",
     "license": "MIT",
-    "version": "0.2.0",
-    "exports": "./mod.ts"
+    "version": "0.3.0",
+    "exports": {
+        ".": "./src/index.ts",
+        "./client": "./src/index.client.ts",
+        "./server": "./src/index.server.ts"
+    }
 }

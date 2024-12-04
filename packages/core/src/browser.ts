@@ -1,7 +1,6 @@
 /* eslint-disable turbo/no-undeclared-env-vars */
 import type { z } from "zod";
 import Emittery from "emittery";
-import { WebSocket } from "undici";
 
 import type {
   ChannelMemberSchema,

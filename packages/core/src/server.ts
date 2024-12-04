@@ -1,6 +1,5 @@
 /* eslint-disable turbo/no-undeclared-env-vars */
 import type { z } from "zod";
-import { fetch } from "undici";
 
 import type {
   ServerEndpointSchema,

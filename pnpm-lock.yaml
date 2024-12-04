@@ -6,12 +6,6 @@ settings:
 
 catalogs:
   default:
-    '@types/node':
-      specifier: ^22.10.1
-      version: 22.10.1
-    crossws:
-      specifier: ^0.3.1
-      version: 0.3.1
     eslint:
       specifier: ^9.15.0
       version: 9.16.0
@@ -322,15 +316,9 @@ importers:
       '@sinkr/validators':
         specifier: npm:@jsr/sinkr__validators@0.1.0
         version: '@jsr/sinkr__validators@0.1.0'
-      crossws:
-        specifier: ^0.3.1
-        version: 0.3.1
       emittery:
         specifier: ^1.0.3
         version: 1.0.3
-      undici:
-        specifier: ^7.0.0
-        version: 7.0.0
       zod:
         specifier: ^3.23.8
         version: 3.23.8
@@ -344,6 +332,9 @@ importers:
       '@sinkr/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/typescript
+      '@types/node':
+        specifier: ^22.10.1
+        version: 22.10.1
       eslint:
         specifier: 'catalog:'
         version: 9.16.0(jiti@1.21.6)
