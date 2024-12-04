@@ -1,7 +1,7 @@
 {
     "name": "@sinkr/core",
     "license": "MIT",
-    "version": "0.3.1",
+    "version": "0.3.2",
     "exports": {
         ".": "./src/index.ts"
     }

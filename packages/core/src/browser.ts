@@ -121,6 +121,7 @@ class BrowserSinker extends Emittery<EventMapWithDefaults> {
       const dat = event.data as unknown;
       const parsed = ClientReceiveSchema.safeParse(dat);
       if (!parsed.success) {
+        console.error("Failed to parse message", parsed.error, event.data);
         this.ws?.close();
         return;
       }
