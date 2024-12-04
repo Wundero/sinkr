@@ -1,6 +1,5 @@
 /* eslint-disable turbo/no-undeclared-env-vars */
 import type { z } from "zod";
-import axios from "axios";
 
 import type {
   ServerEndpointSchema,
@@ -9,7 +8,6 @@ import type {
 
 import type { RealEventMap } from "./event-fallback";
 import type { UserInfo } from "./index";
-import { Readable } from "stream";
 
 type SendDataParam =
   | z.infer<typeof ServerEndpointSchema>
@@ -82,11 +80,11 @@ class Sourcerer {
   ) {
     if (stream) {
       const encodedStream = preludeAndEncodeStream(data, stream);
-      // @ts-expect-error - Conflicting node types, should work
-      const nodeStream = Readable.fromWeb(encodedStream);
-      const res = await axios(this.url.toString(), {
+      const res = await fetch(this.url.toString(), {
         method: "POST",
-        data: nodeStream,
+        body: encodedStream,
+        // @ts-expect-error - Nonstandard API
+        duplex: "full",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${this.appKey}`,
