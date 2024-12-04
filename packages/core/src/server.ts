@@ -1,5 +1,6 @@
 /* eslint-disable turbo/no-undeclared-env-vars */
 import type { z } from "zod";
+import axios from "axios";
 
 import type {
   ServerEndpointSchema,
@@ -80,11 +81,9 @@ class Sourcerer {
   ) {
     if (stream) {
       const encodedStream = preludeAndEncodeStream(data, stream);
-      const res = await fetch(this.url, {
+      const res = await axios(this.url.toString(), {
         method: "POST",
-        body: encodedStream,
-        // @ts-expect-error Non-standard API.
-        duplex: "half",
+        data: encodedStream,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${this.appKey}`,
@@ -93,9 +92,9 @@ class Sourcerer {
       });
       return res.status;
     } else {
-      const res = await fetch(this.url, {
+      const res = await axios(this.url.toString(), {
         method: "POST",
-        body: JSON.stringify(data),
+        data,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${this.appKey}`,
