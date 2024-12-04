@@ -3,8 +3,6 @@
     "license": "MIT",
     "version": "0.3.0",
     "exports": {
-        ".": "./src/index.ts",
-        "./client": "./src/index.client.ts",
-        "./server": "./src/index.server.ts"
+        ".": "./src/index.ts"
     }
 }
