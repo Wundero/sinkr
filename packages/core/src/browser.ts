@@ -99,6 +99,14 @@ class BrowserSinker extends Emittery<EventMapWithDefaults> {
   }
 
   /**
+   * Disconnect from the Sinkr server and clear all listeners.
+   */
+  disconnect() {
+    this.ws?.close();
+    this.clearListeners();
+  }
+
+  /**
    * Connect to the Sinkr server.
    */
   connect() {
