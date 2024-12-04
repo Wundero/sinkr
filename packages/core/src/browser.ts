@@ -15,7 +15,8 @@ import type {
 } from "@sinkr/validators";
 import { ClientReceiveSchema } from "@sinkr/validators";
 
-import type { EventMap, UserInfo } from "./index";
+import type { RealEventMap } from "./event-fallback";
+import type { UserInfo } from "./index";
 import {
   connectSymbol,
   countEventSymbol,
@@ -47,7 +48,7 @@ type GenericMessageEvent<T> = Prettify<
 >;
 
 type MappedEvents = {
-  [K in keyof EventMap]: GenericMessageEvent<EventMap[K]>;
+  [K in keyof RealEventMap]: GenericMessageEvent<RealEventMap[K]>;
 };
 
 type _EventMapWithDefaults = MappedEvents & DefaultEvents;
@@ -156,7 +157,7 @@ interface DefaultChannelEventMap {
   [countEventSymbol]: { count: number };
 }
 
-type ChannelEventMap = Prettify<DefaultChannelEventMap & EventMap>;
+type ChannelEventMap = Prettify<DefaultChannelEventMap & RealEventMap>;
 
 class ChannelSinker extends Emittery<ChannelEventMap> {
   private _count = 0;
@@ -214,7 +215,7 @@ interface DefaultPresenceChannelEventMap {
 }
 
 type PresenceChannelEventMap = Prettify<
-  DefaultPresenceChannelEventMap & EventMap
+  DefaultPresenceChannelEventMap & RealEventMap
 >;
 
 class PresenceSinker extends Emittery<PresenceChannelEventMap> {

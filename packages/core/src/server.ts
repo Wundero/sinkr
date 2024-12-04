@@ -7,7 +7,8 @@ import type {
   StreamedServerEndpointSchema,
 } from "@sinkr/validators";
 
-import type { EventMap, UserInfo } from "./index";
+import type { RealEventMap } from "./event-fallback";
+import type { UserInfo } from "./index";
 
 type SendDataParam =
   | z.infer<typeof ServerEndpointSchema>
@@ -165,8 +166,8 @@ class Sourcerer {
    * @returns The HTTP status code Sinkr returned.
    */
   async sendToChannel<
-    TEvent extends keyof EventMap,
-    TData extends EventMap[TEvent],
+    TEvent extends keyof RealEventMap,
+    TData extends RealEventMap[TEvent],
   >(channel: string, event: TEvent, message: TData): Promise<number> {
     return await this.sendData({
       route: "channel",
@@ -184,8 +185,8 @@ class Sourcerer {
    * @returns The HTTP status code Sinkr returned. The function may return before the stream is finished.
    */
   async streamToChannel<
-    TEvent extends keyof EventMap,
-    TData extends EventMap[TEvent],
+    TEvent extends keyof RealEventMap,
+    TData extends RealEventMap[TEvent],
   >(
     channel: string,
     event: TEvent,
@@ -209,8 +210,8 @@ class Sourcerer {
    * @returns The HTTP status code Sinkr returned.
    */
   async directMessage<
-    TEvent extends keyof EventMap,
-    TData extends EventMap[TEvent],
+    TEvent extends keyof RealEventMap,
+    TData extends RealEventMap[TEvent],
   >(userId: string, event: TEvent, message: TData): Promise<number> {
     return await this.sendData({
       route: "direct",
@@ -228,8 +229,8 @@ class Sourcerer {
    * @returns The HTTP status code Sinkr returned. The function may return before the stream is finished.
    */
   async streamDirectMessage<
-    TEvent extends keyof EventMap,
-    TData extends EventMap[TEvent],
+    TEvent extends keyof RealEventMap,
+    TData extends RealEventMap[TEvent],
   >(
     userId: string,
     event: TEvent,
@@ -252,8 +253,8 @@ class Sourcerer {
    * @returns The HTTP status code Sinkr returned.
    */
   async broadcastMessage<
-    TEvent extends keyof EventMap,
-    TData extends EventMap[TEvent],
+    TEvent extends keyof RealEventMap,
+    TData extends RealEventMap[TEvent],
   >(event: TEvent, message: TData): Promise<number> {
     return await this.sendData({
       route: "broadcast",
@@ -269,8 +270,8 @@ class Sourcerer {
    * @returns The HTTP status code Sinkr returned. The function may return before the stream is finished.
    */
   async streamBroadcastMessage<
-    TEvent extends keyof EventMap,
-    TData extends EventMap[TEvent],
+    TEvent extends keyof RealEventMap,
+    TData extends RealEventMap[TEvent],
   >(event: TEvent, stream: ReadableStream<TData>): Promise<number> {
     return await this.sendData(
       {

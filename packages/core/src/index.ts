@@ -1,17 +1,10 @@
 /**
- * Default event map which is used if no custom events are specified.
- *
- * Supports sending any event with a string key.
- */
-export type DefaultEventMap = Record<string, unknown>;
-
-/**
  * Event map for customizing which events can be sent or received.
  *
  * Override this with module augmentation to specify your own types.
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface EventMap extends DefaultEventMap {}
+export interface EventMap {}
 
 /**
  * User information for presence channels.
