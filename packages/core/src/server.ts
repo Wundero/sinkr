@@ -9,6 +9,7 @@ import type {
 
 import type { RealEventMap } from "./event-fallback";
 import type { UserInfo } from "./index";
+import { Readable } from "stream";
 
 type SendDataParam =
   | z.infer<typeof ServerEndpointSchema>
@@ -81,9 +82,11 @@ class Sourcerer {
   ) {
     if (stream) {
       const encodedStream = preludeAndEncodeStream(data, stream);
+      // @ts-expect-error - Conflicting node types, should work
+      const nodeStream = Readable.fromWeb(encodedStream);
       const res = await axios(this.url.toString(), {
         method: "POST",
-        data: encodedStream,
+        data: nodeStream,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${this.appKey}`,
@@ -92,9 +95,9 @@ class Sourcerer {
       });
       return res.status;
     } else {
-      const res = await axios(this.url.toString(), {
+      const res = await fetch(this.url, {
         method: "POST",
-        data,
+        body: JSON.stringify(data),
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${this.appKey}`,
