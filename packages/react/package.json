@@ -1,6 +1,6 @@
 {
   "name": "@sinkr/react",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "type": "module",
   "main": "src/index.ts",
   "exports": {
@@ -25,7 +25,7 @@
   },
   "prettier": "@sinkr/prettier-config",
   "dependencies": {
-    "@sinkr/core": "npm:@jsr/sinkr__core@0.3.10",
+    "@sinkr/core": "npm:@jsr/sinkr__core@0.3.11",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   }
