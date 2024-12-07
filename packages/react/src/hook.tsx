@@ -2,8 +2,8 @@
 
 import React, { useEffect } from "react";
 
-import type { Channel, EventMap, PresenceChannel, Sinker } from "@sinkr/core";
-import { sink } from "@sinkr/core";
+import type { Channel, EventMap, PresenceChannel, Sinker } from "@sinkr/core/client";
+import { sink } from "@sinkr/core/client";
 
 interface SinkrContext {
   sink: Sinker;
