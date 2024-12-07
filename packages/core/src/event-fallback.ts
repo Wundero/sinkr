@@ -1,4 +1,4 @@
-import type { EventMap } from "./index";
+import type { EventMap } from "./types";
 
 type DefaultMap = Record<string, unknown>;
 

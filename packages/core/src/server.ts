@@ -8,7 +8,7 @@ import type {
 } from "@sinkr/validators";
 
 import type { RealEventMap } from "./event-fallback";
-import type { UserInfo } from "./index";
+import type { UserInfo } from "./types";
 
 type SendDataParam =
   | z.infer<typeof ServerEndpointSchema>
