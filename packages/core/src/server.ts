@@ -1,5 +1,6 @@
 /* eslint-disable turbo/no-undeclared-env-vars */
 import type { z } from "zod";
+import { fetch } from "undici";
 
 import type {
   ServerEndpointSchema,
@@ -82,9 +83,9 @@ class Sourcerer {
       const encodedStream = preludeAndEncodeStream(data, stream);
       const res = await fetch(this.url.toString(), {
         method: "POST",
+        // @ts-expect-error Types are not exported properly
         body: encodedStream,
-        // @ts-expect-error - Nonstandard API
-        duplex: "full",
+        duplex: "half",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${this.appKey}`,

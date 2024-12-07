@@ -328,6 +328,9 @@ importers:
       emittery:
         specifier: ^1.0.3
         version: 1.0.3
+      undici:
+        specifier: ^7.1.0
+        version: 7.1.0
       zod:
         specifier: ^3.23.8
         version: 3.23.8
@@ -4701,6 +4704,10 @@ packages:
   undici@5.28.4:
     resolution: {integrity: sha512-72RFADWFqKmUb2hmmvNODKL3p9hcB6Gt2DOQMis1SEBaV6a4MH8soBvzg+95CYhCKPFedut2JY9bMfrDl9D23g==}
     engines: {node: '>=14.0'}
+
+  undici@7.1.0:
+    resolution: {integrity: sha512-3+mdX2R31khuLCm2mKExSlMdJsfol7bJkIMH80tdXA74W34rT1jKemUTlYR7WY3TqsV4wfOgpatWmmB2Jl1+5g==}
+    engines: {node: '>=20.18.1'}
 
   unenv-nightly@2.0.0-20241204-140205-a5d5190:
     resolution: {integrity: sha512-jpmAytLeiiW01pl5bhVn9wYJ4vtiLdhGe10oXlJBuQEX8mxjxO8BlEXGHU4vr4yEikjFP1wsomTHt/CLU8kUwg==}
@@ -9256,6 +9263,8 @@ snapshots:
   undici@5.28.4:
     dependencies:
       '@fastify/busboy': 2.1.1
+
+  undici@7.1.0: {}
 
   unenv-nightly@2.0.0-20241204-140205-a5d5190:
     dependencies:
