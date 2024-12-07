@@ -21,9 +21,9 @@ jobs:
           node-version: 22
           cache: 'pnpm'
       - run: pnpm install
-      - run: npx jsr publish --allow-slow-types --unstable-bare-node-builtins
+      - run: npx jsr publish --allow-slow-types
         working-directory: ./packages/validators
-      - run: npx jsr publish --unstable-bare-node-builtins
+      - run: npx jsr publish
         working-directory: ./packages/core
-      - run: npx jsr publish --unstable-bare-node-builtins
+      - run: npx jsr publish
         working-directory: ./packages/react
