@@ -23,12 +23,14 @@ function preludeAndEncodeStream(
     async start(controller) {
       controller.enqueue(prelude);
       try {
-        const { done, value } = await reader.read();
-        if (done) {
-          controller.close();
-          return;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            controller.close();
+            return;
+          }
+          controller.enqueue(value);
         }
-        controller.enqueue(value);
       } catch (e) {
         controller.error(e);
       }

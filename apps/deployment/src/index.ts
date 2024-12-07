@@ -95,22 +95,26 @@ export class $DurableObject extends DurableObject {
           });
           const peerIdSet = new Set();
           dbPeers.forEach((p) => peerIdSet.add(p.id));
-          return unblockedResponse(reader, (message) => {
-            peers.forEach((peer) => {
-              if (peerIdSet.has(peer.id)) {
-                sendToPeer(peer, {
-                  source: "message",
-                  data: {
-                    event: data.event,
-                    from: {
-                      source: "broadcast",
+          return unblockedResponse(
+            reader,
+            (message) => {
+              peers.forEach((peer) => {
+                if (peerIdSet.has(peer.id)) {
+                  sendToPeer(peer, {
+                    source: "message",
+                    data: {
+                      event: data.event,
+                      from: {
+                        source: "broadcast",
+                      },
+                      message,
                     },
-                    message,
-                  },
-                });
-              }
-            });
-          });
+                  });
+                }
+              });
+            },
+            this.ctx,
+          );
         }
         case "channel": {
           const subscriptions =
@@ -122,24 +126,28 @@ export class $DurableObject extends DurableObject {
                 ),
             });
           const peers = getPeerMap();
-          return unblockedResponse(reader, (message) => {
-            subscriptions.forEach((sub) => {
-              const peer = peers.get(sub.peerId);
-              if (peer) {
-                sendToPeer(peer, {
-                  source: "message",
-                  data: {
-                    event: data.event,
-                    from: {
-                      source: "channel",
-                      channel: data.channel,
+          return unblockedResponse(
+            reader,
+            (message) => {
+              subscriptions.forEach((sub) => {
+                const peer = peers.get(sub.peerId);
+                if (peer) {
+                  sendToPeer(peer, {
+                    source: "message",
+                    data: {
+                      event: data.event,
+                      from: {
+                        source: "channel",
+                        channel: data.channel,
+                      },
+                      message,
                     },
-                    message,
-                  },
-                });
-              }
-            });
-          });
+                  });
+                }
+              });
+            },
+            this.ctx,
+          );
         }
         case "direct": {
           const dbPeer = await db.query.peers.findFirst({
@@ -159,18 +167,22 @@ export class $DurableObject extends DurableObject {
           if (!peer) {
             return new Response("Not found", { status: 404 });
           }
-          return unblockedResponse(reader, (message) => {
-            sendToPeer(peer, {
-              source: "message",
-              data: {
-                event: data.event,
-                from: {
-                  source: "direct",
+          return unblockedResponse(
+            reader,
+            (message) => {
+              sendToPeer(peer, {
+                source: "message",
+                data: {
+                  event: data.event,
+                  from: {
+                    source: "direct",
+                  },
+                  message,
                 },
-                message,
-              },
-            });
-          });
+              });
+            },
+            this.ctx,
+          );
         }
       }
     }
@@ -520,21 +532,37 @@ function transformRequestStream(body: ReadableStream) {
 async function unblockedResponse(
   body: ReadableStreamDefaultReader<unknown>,
   onMessageChunk: (chunk: unknown) => void | Promise<void>,
+  ctx: DurableObjectState,
 ) {
-  while (true) {
-    const { done, value } = await body.read();
-    if (done) {
-      break;
-    }
-    await onMessageChunk(value);
-  }
-  return new Response("OK", {
-    status: 200,
+  return new Promise<Response>((resolve) => {
+    const daemonPromise = new Promise<void>((closeDaemon) => {
+      const rs = new ReadableStream({
+        async start(controller) {
+          while (true) {
+            const { done, value } = await body.read();
+            if (done) {
+              controller.close();
+              closeDaemon();
+              break;
+            }
+            await onMessageChunk(value);
+            controller.enqueue("OK");
+          }
+        },
+      });
+      resolve(
+        new Response(rs, {
+          status: 200,
+        }),
+      );
+    });
+    ctx.waitUntil(daemonPromise);
   });
 }
 
 export default {
   async fetch(request, env, ctx): Promise<Response> {
-    return ws.handleUpgrade(request, env, ctx);
+    const res = await ws.handleUpgrade(request, env, ctx);
+    return new Response(res.body, res);
   },
 } satisfies ExportedHandler<Env>;
