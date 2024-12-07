@@ -9,22 +9,22 @@
     "cf-typegen": "wrangler types"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20241127.0",
+    "@cloudflare/workers-types": "^4.20241205.0",
     "@sinkr/eslint-config": "workspace:*",
     "@sinkr/prettier-config": "workspace:*",
     "@sinkr/tsconfig": "workspace:*",
     "@types/node": "catalog:",
-    "drizzle-kit": "^0.28.1",
+    "drizzle-kit": "^0.29.1",
     "eslint": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:",
-    "wrangler": "^3.91.0"
+    "wrangler": "^3.93.0"
   },
   "prettier": "@sinkr/prettier-config",
   "dependencies": {
     "@sinkr/validators": "workspace:*",
     "crossws": "catalog:",
-    "drizzle-orm": "^0.36.4",
+    "drizzle-orm": "^0.37.0",
     "uuid": "^11.0.3",
     "zod": "^3.23.8"
   }
