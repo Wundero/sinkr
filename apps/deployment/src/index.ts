@@ -536,7 +536,7 @@ async function unblockedResponse(
 ) {
   return new Promise<Response>((resolve) => {
     const daemonPromise = new Promise<void>((closeDaemon) => {
-      const rs = new ReadableStream({
+      const rs = new ReadableStream<Uint8Array>({
         async start(controller) {
           while (true) {
             const { done, value } = await body.read();
@@ -546,7 +546,8 @@ async function unblockedResponse(
               break;
             }
             await onMessageChunk(value);
-            controller.enqueue("OK");
+            const encoder = new TextEncoder();
+            controller.enqueue(encoder.encode("OK\n"));
           }
         },
       });
@@ -562,7 +563,6 @@ async function unblockedResponse(
 
 export default {
   async fetch(request, env, ctx): Promise<Response> {
-    const res = await ws.handleUpgrade(request, env, ctx);
-    return new Response(res.body, res);
+    return ws.handleUpgrade(request, env, ctx);
   },
 } satisfies ExportedHandler<Env>;
