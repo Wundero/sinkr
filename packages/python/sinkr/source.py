@@ -3,6 +3,7 @@ from typing import Optional
 from urllib.parse import urlparse
 import os
 import requests
+import json
 from requests.compat import basestring
 
 
@@ -15,9 +16,9 @@ def stream_with_prelude(prelude, iterable):
 
     :return: A new stream with the prelude attached.
     """
-    yield prelude
+    yield json.dumps(prelude)
     for item in iterable:
-        yield item
+        yield json.dumps(item)
 
 
 def data_is_stream(data):
