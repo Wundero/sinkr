@@ -554,6 +554,9 @@ async function unblockedResponse(
       resolve(
         new Response(rs, {
           status: 200,
+          headers: {
+            "Content-Type": "text/event-stream",
+          },
         }),
       );
     });
