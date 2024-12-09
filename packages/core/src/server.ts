@@ -64,8 +64,11 @@ class Sourcerer {
     this.wsUrl.searchParams.set("appKey", this.appKey);
   }
 
-  private connectWS() {
+  private async connectWS() {
     this.wsClient ??= new WebSocket(this.wsUrl.toString());
+    await new Promise((res) => {
+      this.wsClient?.addEventListener("open", res);
+    });
     this.wsClient.addEventListener("close", () => {
       this.wsClient = undefined;
     });
@@ -85,7 +88,7 @@ class Sourcerer {
   ) {
     if (stream) {
       const encodedStream = prepareStream(data, stream);
-      const ws = this.connectWS();
+      const ws = await this.connectWS();
       const reader = encodedStream.getReader();
       const statuses = new Map<string, number>();
       const ids: string[] = [];
@@ -117,7 +120,7 @@ class Sourcerer {
         );
       }
     } else {
-      if (this.wsClient) {
+      if (this.wsClient && this.wsClient.readyState === WebSocket.OPEN) {
         const id = crypto.randomUUID();
         return new Promise<number>((res) => {
           const onMsg = (ev: MessageEvent) => {
