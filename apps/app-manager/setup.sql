@@ -77,6 +77,7 @@ CREATE TABLE
     IF NOT EXISTS `peer` (
         `id` text PRIMARY KEY NOT NULL,
         `appId` text NOT NULL,
+        `type` text NOT NULL DEFAULT 'sink',
         `authenticatedUserId` text,
         `userInfo` text,
         FOREIGN KEY (`appId`) REFERENCES `app` (`id`) ON UPDATE no action ON DELETE cascade

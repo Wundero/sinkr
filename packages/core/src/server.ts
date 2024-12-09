@@ -1,6 +1,7 @@
 /* eslint-disable turbo/no-undeclared-env-vars */
+import type { MessageEvent } from "undici";
 import type { z } from "zod";
-import { fetch } from "undici";
+import { fetch, WebSocket } from "undici";
 
 import type {
   ServerEndpointSchema,
@@ -14,14 +15,10 @@ type SendDataParam =
   | z.infer<typeof ServerEndpointSchema>
   | z.infer<typeof StreamedServerEndpointSchema>;
 
-function preludeAndEncodeStream(
-  prelude: unknown,
-  stream: ReadableStream<unknown>,
-) {
+function prepareStream(shape: object, stream: ReadableStream<unknown>) {
   const reader = stream.getReader();
   const morphedUnencodedStream = new ReadableStream<unknown>({
     async start(controller) {
-      controller.enqueue(prelude);
       try {
         while (true) {
           const { done, value } = await reader.read();
@@ -29,36 +26,25 @@ function preludeAndEncodeStream(
             controller.close();
             return;
           }
-          controller.enqueue(value);
+          controller.enqueue({
+            ...shape,
+            message: value,
+          });
         }
       } catch (e) {
         controller.error(e);
       }
     },
   });
-  const transformer = new TransformStream<unknown, Uint8Array>({
-    transform(chunk, controller) {
-      if (
-        chunk === null ||
-        chunk === undefined ||
-        typeof chunk === "function"
-      ) {
-        controller.error(new Error("Invalid chunk provided!"));
-        return;
-      }
-      try {
-        const encoded = new TextEncoder().encode(JSON.stringify(chunk));
-        controller.enqueue(encoded);
-      } catch (e) {
-        controller.error(e);
-      }
-    },
-  });
-  return morphedUnencodedStream.pipeThrough(transformer);
+  return morphedUnencodedStream;
 }
 
 class Sourcerer {
   private url: URL;
+  private wsUrl: URL;
+
+  private wsClient?: WebSocket;
+
   constructor(
     url: string,
     private appKey: string,
@@ -68,34 +54,92 @@ class Sourcerer {
     if (parsedUrl.pathname === "/" && appId) {
       parsedUrl.pathname = `/${appId}`;
     }
-    if (parsedUrl.protocol !== "https:") {
-      parsedUrl.protocol = "https:";
-    }
+    parsedUrl.protocol = "https:";
     if (parsedUrl.pathname === "/") {
       throw new Error("Invalid URL provided for Sourcerer!");
     }
     this.url = parsedUrl;
+    this.wsUrl = new URL(parsedUrl.toString());
+    this.wsUrl.protocol = "wss:";
+    this.wsUrl.searchParams.set("appKey", this.appKey);
   }
 
+  private connectWS() {
+    this.wsClient ??= new WebSocket(this.wsUrl.toString());
+    this.wsClient.addEventListener("close", () => {
+      this.wsClient = undefined;
+    });
+    return this.wsClient;
+  }
+
+  private async sendData<TData extends SendDataParam>(
+    data: TData,
+  ): Promise<number>;
+  private async sendData<TData extends SendDataParam>(
+    data: TData,
+    stream: ReadableStream<unknown>,
+  ): Promise<number[]>;
   private async sendData<TData extends SendDataParam>(
     data: TData,
     stream?: ReadableStream<unknown>,
   ) {
     if (stream) {
-      const encodedStream = preludeAndEncodeStream(data, stream);
-      const res = await fetch(this.url.toString(), {
-        method: "POST",
-        // @ts-expect-error Types are not exported properly
-        body: encodedStream,
-        duplex: "half",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${this.appKey}`,
-          "X-Sinkr-Stream": "true",
-        },
-      });
-      return res.status;
+      const encodedStream = prepareStream(data, stream);
+      const ws = this.connectWS();
+      const reader = encodedStream.getReader();
+      const statuses = new Map<string, number>();
+      const ids: string[] = [];
+      const onMsg = (ev: MessageEvent) => {
+        const data = JSON.parse(ev.data as string) as {
+          status: number;
+          id: string;
+          error?: string;
+        };
+        if (ids.includes(data.id)) {
+          statuses.set(data.id, data.status);
+        }
+        return;
+      };
+      ws.addEventListener("message", onMsg);
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) {
+          ws.removeEventListener("message", onMsg);
+          return ids.map((id) => statuses.get(id) ?? 500);
+        }
+        const id = crypto.randomUUID();
+        ids.push(id);
+        ws.send(
+          JSON.stringify({
+            data: value,
+            id,
+          }),
+        );
+      }
     } else {
+      if (this.wsClient) {
+        const id = crypto.randomUUID();
+        return new Promise<number>((res) => {
+          const onMsg = (ev: MessageEvent) => {
+            const data = JSON.parse(ev.data as string) as {
+              status: number;
+              id: string;
+              error?: string;
+            };
+            if (data.id === id) {
+              this.wsClient?.removeEventListener("message", onMsg);
+              res(data.status);
+            }
+          };
+          this.wsClient?.addEventListener("message", onMsg);
+          this.wsClient?.send(
+            JSON.stringify({
+              data,
+              id,
+            }),
+          );
+        });
+      }
       const res = await fetch(this.url, {
         method: "POST",
         body: JSON.stringify(data),
@@ -193,7 +237,7 @@ class Sourcerer {
     channel: string,
     event: TEvent,
     stream: ReadableStream<TData>,
-  ): Promise<number> {
+  ): Promise<number[]> {
     return await this.sendData(
       {
         route: "channel",
@@ -237,7 +281,7 @@ class Sourcerer {
     userId: string,
     event: TEvent,
     stream: ReadableStream<TData>,
-  ): Promise<number> {
+  ): Promise<number[]> {
     return await this.sendData(
       {
         route: "direct",
@@ -274,7 +318,7 @@ class Sourcerer {
   async streamBroadcastMessage<
     TEvent extends keyof RealEventMap,
     TData extends RealEventMap[TEvent],
-  >(event: TEvent, stream: ReadableStream<TData>): Promise<number> {
+  >(event: TEvent, stream: ReadableStream<TData>): Promise<number[]> {
     return await this.sendData(
       {
         route: "broadcast",

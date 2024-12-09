@@ -39,29 +39,6 @@ export const BroadcastMessageSchema = z.object({
   message: z.unknown(),
 });
 
-export const StreamedChannelMessageSchema = z.object({
-  route: z.literal("channel"),
-  channel: z.string(),
-  event: z.string(),
-});
-
-export const StreamedDirectMessageSchema = z.object({
-  route: z.literal("direct"),
-  recipientId: z.string(),
-  event: z.string(),
-});
-
-export const StreamedBroadcastMessageSchema = z.object({
-  route: z.literal("broadcast"),
-  event: z.string(),
-});
-
-export const StreamedServerEndpointSchema = z.discriminatedUnion("route", [
-  StreamedChannelMessageSchema,
-  StreamedDirectMessageSchema,
-  StreamedBroadcastMessageSchema,
-]);
-
 export const ServerEndpointSchema = z.discriminatedUnion("route", [
   AuthenticateRouteSchema,
   SubscribeRouteSchema,

@@ -29,6 +29,9 @@ export const peers = sqliteTable(
       .references(() => apps.id, {
         onDelete: "cascade",
       }),
+    type: text({ enum: ["source", "sink"] })
+      .notNull()
+      .default("sink"),
     authenticatedUserId: text(),
     userInfo: text({
       mode: "json",

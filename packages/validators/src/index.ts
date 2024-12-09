@@ -14,10 +14,6 @@ import {
   ClientReceiveSchema as clientReceiveSchema,
   DirectMessageSchema as directMessageSchema,
   ServerEndpointSchema as serverEndpointSchema,
-  StreamedBroadcastMessageSchema as streamedBroadcastMessageSchema,
-  StreamedChannelMessageSchema as streamedChannelMessageSchema,
-  StreamedDirectMessageSchema as streamedDirectMessageSchema,
-  StreamedServerEndpointSchema as streamedServerEndpointSchema,
   SubscribeRouteSchema as subscribeRouteSchema,
   UnsubscribeRouteSchema as unsubscribeRouteSchema,
 } from "./schemas";
@@ -34,14 +30,6 @@ export const DirectMessageSchema: typeof directMessageSchema =
   directMessageSchema;
 export const BroadcastMessageSchema: typeof broadcastMessageSchema =
   broadcastMessageSchema;
-export const StreamedChannelMessageSchema: typeof streamedChannelMessageSchema =
-  streamedChannelMessageSchema;
-export const StreamedDirectMessageSchema: typeof streamedDirectMessageSchema =
-  streamedDirectMessageSchema;
-export const StreamedBroadcastMessageSchema: typeof streamedBroadcastMessageSchema =
-  streamedBroadcastMessageSchema;
-export const StreamedServerEndpointSchema: typeof streamedServerEndpointSchema =
-  streamedServerEndpointSchema;
 export const ServerEndpointSchema: typeof serverEndpointSchema =
   serverEndpointSchema;
 export const ClientCountChannelSchema: typeof clientCountChannelSchema =
