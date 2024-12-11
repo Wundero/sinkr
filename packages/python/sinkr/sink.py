@@ -93,9 +93,9 @@ class SinkrSink(AbstractAsyncContextManager):
             callback(data["data"])
 
     async def __iter__messages(self):
-        if not self.ws:
-            raise ValueError("Not connected!")
         while True:
+            if not self.ws:
+                return
             message = await self.ws.recv(True)
             self.messages.append(message)
             self.__trigger_callbacks(message)
