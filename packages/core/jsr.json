@@ -1,7 +1,7 @@
 {
     "name": "@sinkr/core",
     "license": "MIT",
-    "version": "0.4.2",
+    "version": "0.4.3",
     "exports": {
         ".": "./src/index.ts",
         "./client": "./src/index.browser.ts",

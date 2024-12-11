@@ -3,17 +3,12 @@ import type { MessageEvent } from "undici";
 import type { z } from "zod";
 import { fetch, WebSocket } from "undici";
 
-import type {
-  ServerEndpointSchema,
-  StreamedServerEndpointSchema,
-} from "@sinkr/validators";
+import type { ServerEndpointSchema } from "@sinkr/validators";
 
 import type { RealEventMap } from "./event-fallback";
 import type { UserInfo } from "./types";
 
-type SendDataParam =
-  | z.infer<typeof ServerEndpointSchema>
-  | z.infer<typeof StreamedServerEndpointSchema>;
+type SendDataParam = z.infer<typeof ServerEndpointSchema>;
 
 function prepareStream(shape: object, stream: ReadableStream<unknown>) {
   const reader = stream.getReader();
