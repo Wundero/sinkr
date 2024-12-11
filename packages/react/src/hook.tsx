@@ -2,7 +2,12 @@
 
 import React, { useEffect } from "react";
 
-import type { Channel, EventMap, PresenceChannel, Sinker } from "@sinkr/core/client";
+import type {
+  Channel,
+  EventMap,
+  PresenceChannel,
+  Sinker,
+} from "@sinkr/core/client";
 import { sink } from "@sinkr/core/client";
 
 interface SinkrContext {
@@ -11,6 +16,12 @@ interface SinkrContext {
 
 const SinkrContext = React.createContext<SinkrContext | null>(null);
 
+/**
+ * Props for the SinkrProvider component.
+ * @param url The URL of the Sinkr server.
+ * @param appId The app ID to use for the connection. Optional, ignored if the URL has an app ID already.
+ * @param children The children to render.
+ */
 export interface SinkrProviderProps {
   url: string;
   appId?: string;
