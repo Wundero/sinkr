@@ -236,8 +236,8 @@ importers:
   packages/core:
     dependencies:
       '@sinkr/validators':
-        specifier: npm:@jsr/sinkr__validators@0.1.0
-        version: '@jsr/sinkr__validators@0.1.0'
+        specifier: npm:@jsr/sinkr__validators@0.2.0
+        version: '@jsr/sinkr__validators@0.2.0'
       emittery:
         specifier: ^1.0.3
         version: 1.0.3
@@ -245,8 +245,8 @@ importers:
         specifier: ^7.1.0
         version: 7.1.0
       zod:
-        specifier: ^3.23.8
-        version: 3.23.8
+        specifier: ^3.24.0
+        version: 3.24.0
     devDependencies:
       '@sinkr/eslint-config':
         specifier: workspace:*
@@ -273,8 +273,8 @@ importers:
   packages/react:
     dependencies:
       '@sinkr/core':
-        specifier: npm:@jsr/sinkr__core@0.3.11
-        version: '@jsr/sinkr__core@0.3.11'
+        specifier: npm:@jsr/sinkr__core@0.4.1
+        version: '@jsr/sinkr__core@0.4.1'
       react:
         specifier: ^19.0.0
         version: 19.0.0
@@ -295,8 +295,8 @@ importers:
         specifier: ^19.0.1
         version: 19.0.1
       '@types/react-dom':
-        specifier: ^19.0.1
-        version: 19.0.1
+        specifier: ^19.0.2
+        version: 19.0.2(@types/react@19.0.1)
       eslint:
         specifier: 'catalog:'
         version: 9.16.0(jiti@1.21.6)
@@ -310,8 +310,8 @@ importers:
   packages/validators:
     dependencies:
       zod:
-        specifier: ^3.23.8
-        version: 3.23.8
+        specifier: ^3.24.0
+        version: 3.24.0
     devDependencies:
       '@sinkr/eslint-config':
         specifier: workspace:*
@@ -1258,11 +1258,14 @@ packages:
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
 
-  '@jsr/sinkr__core@0.3.11':
-    resolution: {integrity: sha512-TeVBHUdJISA02fwE3CPJ2/bvHKhRniYaYgdk5kyxJAcoAU8AvJlCQobLaiv9MHYBSx48kYvKwYgkfM6wQjf5cA==, tarball: https://npm.jsr.io/~/11/@jsr/sinkr__core/0.3.11.tgz}
+  '@jsr/sinkr__core@0.4.1':
+    resolution: {integrity: sha512-Y4+fa1TAX+pO+H7b6dpPfa5h/kTIud72U2rvShAy9QDqonoxEsQ4sfAmO+Dir+1oz+RJh5PSriurUJ3nK/qpBA==, tarball: https://npm.jsr.io/~/11/@jsr/sinkr__core/0.4.1.tgz}
 
   '@jsr/sinkr__validators@0.1.0':
     resolution: {integrity: sha512-AJ8Z0Mtjaco5s/L59VXLCn5nkPBNY3KpXDbNkwcZIChZspZp4DNZ4oXv9yJ8oRcbyqu95YGhRZF7mrG9Cjsd8Q==, tarball: https://npm.jsr.io/~/11/@jsr/sinkr__validators/0.1.0.tgz}
+
+  '@jsr/sinkr__validators@0.2.0':
+    resolution: {integrity: sha512-oJwmiOUSvuhuQK4xxbeX1LpYeGEvg5Jqb+8tZE4H4uBNvOTOYLudeezw9I+2qM7jB7m4D+GIfVHfASioWERMvw==, tarball: https://npm.jsr.io/~/11/@jsr/sinkr__validators/0.2.0.tgz}
 
   '@miniflare/core@2.14.4':
     resolution: {integrity: sha512-FMmZcC1f54YpF4pDWPtdQPIO8NXfgUxCoR9uyrhxKJdZu7M6n8QKopPVNuaxR40jcsdxb7yKoQoFWnHfzJD9GQ==}
@@ -1803,8 +1806,10 @@ packages:
   '@types/prop-types@15.7.13':
     resolution: {integrity: sha512-hCZTSvwbzWGvhqxp/RqVqwU999pBf2vp7hzIjiYOsl8wqOmUxkQ6ddw1cV3l8811+kdUFus/q4d1Y3E3SyEifA==}
 
-  '@types/react-dom@19.0.1':
-    resolution: {integrity: sha512-hljHij7MpWPKF6u5vojuyfV0YA4YURsQG7KT6SzV0Zs2BXAtgdTxG6A229Ub/xiWV4w/7JL8fi6aAyjshH4meA==}
+  '@types/react-dom@19.0.2':
+    resolution: {integrity: sha512-c1s+7TKFaDRRxr1TxccIX2u7sfCnc3RxkVyBIUA2lCpyqCF+QoAwQ/CBg7bsMdVwP120HEH143VQezKtef5nCg==}
+    peerDependencies:
+      '@types/react': ^19.0.0
 
   '@types/react@18.3.12':
     resolution: {integrity: sha512-D2wOSq/d6Agt28q7rSI3jhU7G6aiuzljDGZ2hTZHIkrTLUI+AF3WMeKkEZ9nN2fkBAlcktT6vcZjDFiIhMYEQw==}
@@ -4352,6 +4357,9 @@ packages:
   zod@3.23.8:
     resolution: {integrity: sha512-XBx9AXhXktjUqnepgTiE5flcKIYWi/rme0Eaj+5Y0lftuGBq+jyRu/md4WnuxqgP1ubdpNCsYEYPxrzVHD8d6g==}
 
+  zod@3.24.0:
+    resolution: {integrity: sha512-Hz+wiY8yD0VLA2k/+nsg2Abez674dDGTai33SwNvMPuf9uIrBC9eFgIMQxBBbHFxVXi8W+5nX9DcAh9YNSQm/w==}
+
 snapshots:
 
   '@alloc/quick-lru@5.2.0': {}
@@ -4566,7 +4574,7 @@ snapshots:
   '@cloudflare/workers-shared@0.10.0':
     dependencies:
       mime: 3.0.0
-      zod: 3.23.8
+      zod: 3.24.0
 
   '@cloudflare/workers-types@4.20241205.0': {}
 
@@ -5002,16 +5010,20 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
 
-  '@jsr/sinkr__core@0.3.11':
+  '@jsr/sinkr__core@0.4.1':
     dependencies:
       '@jsr/sinkr__validators': 0.1.0
       emittery: 1.0.3
       undici: 7.1.0
-      zod: 3.23.8
+      zod: 3.24.0
 
   '@jsr/sinkr__validators@0.1.0':
     dependencies:
-      zod: 3.23.8
+      zod: 3.24.0
+
+  '@jsr/sinkr__validators@0.2.0':
+    dependencies:
+      zod: 3.24.0
 
   '@miniflare/core@2.14.4':
     dependencies:
@@ -5536,7 +5548,7 @@ snapshots:
 
   '@types/prop-types@15.7.13': {}
 
-  '@types/react-dom@19.0.1':
+  '@types/react-dom@19.0.2(@types/react@19.0.1)':
     dependencies:
       '@types/react': 19.0.1
 
@@ -6472,8 +6484,8 @@ snapshots:
       '@babel/plugin-proposal-private-methods': 7.18.6(@babel/core@7.26.0)
       eslint: 9.16.0(jiti@1.21.6)
       hermes-parser: 0.20.1
-      zod: 3.23.8
-      zod-validation-error: 3.4.0(zod@3.23.8)
+      zod: 3.24.0
+      zod-validation-error: 3.4.0(zod@3.24.0)
     transitivePeerDependencies:
       - supports-color
 
@@ -7219,7 +7231,7 @@ snapshots:
       workerd: 1.20241205.0
       ws: 8.18.0
       youch: 3.3.4
-      zod: 3.23.8
+      zod: 3.24.0
     transitivePeerDependencies:
       - bufferutil
       - supports-color
@@ -8410,8 +8422,10 @@ snapshots:
       mustache: 4.2.0
       stacktracey: 2.1.8
 
-  zod-validation-error@3.4.0(zod@3.23.8):
+  zod-validation-error@3.4.0(zod@3.24.0):
     dependencies:
-      zod: 3.23.8
+      zod: 3.24.0
 
   zod@3.23.8: {}
+
+  zod@3.24.0: {}
