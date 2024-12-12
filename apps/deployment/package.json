@@ -14,18 +14,18 @@
     "@sinkr/prettier-config": "workspace:*",
     "@sinkr/tsconfig": "workspace:*",
     "@types/node": "catalog:",
-    "drizzle-kit": "^0.29.1",
+    "drizzle-kit": "^0.30.0",
     "eslint": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:",
-    "wrangler": "^3.93.0"
+    "wrangler": "^3.95.0"
   },
   "prettier": "@sinkr/prettier-config",
   "dependencies": {
     "@sinkr/validators": "workspace:*",
     "crossws": "catalog:",
-    "drizzle-orm": "^0.37.0",
+    "drizzle-orm": "^0.38.1",
     "uuid": "^11.0.3",
-    "zod": "^3.23.8"
+    "zod": "^3.24.1"
   }
 }
