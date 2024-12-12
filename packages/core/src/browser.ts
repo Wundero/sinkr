@@ -313,11 +313,11 @@ export interface SinkOptions {
   /**
    * The Sinkr url to connect to.
    */
-  url?: string;
+  url?: string | undefined;
   /**
    * The Sinkr app to use.
    */
-  appId?: string;
+  appId?: string | undefined;
 }
 
 /**
@@ -325,7 +325,7 @@ export interface SinkOptions {
  * @param options The connection options to use.
  * @returns The connected Sinkr client.
  */
-export function sink(options: SinkOptions = {}): Sinker {
+export function sink(options: SinkOptions | undefined = {}): Sinker {
   const url = options.url ?? process.env.SINKR_URL;
   if (!url) {
     throw new Error("Unable to start Sinkr without a url!");

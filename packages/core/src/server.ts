@@ -339,11 +339,13 @@ export function source({
   url = process.env.SINKR_URL,
   appKey = process.env.SINKER_APP_KEY,
   appId = process.env.SINKR_APP_ID,
-}: {
-  url?: string;
-  appKey?: string;
-  appId?: string;
-} = {}): SinkrSource {
+}:
+  | {
+      url?: string | undefined;
+      appKey?: string | undefined;
+      appId?: string | undefined;
+    }
+  | undefined = {}): SinkrSource {
   if (!url) {
     throw new Error("Unable to start Sourcerer without a url!");
   }
