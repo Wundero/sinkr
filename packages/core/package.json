@@ -19,7 +19,7 @@
     "@sinkr/eslint-config": "workspace:*",
     "@sinkr/prettier-config": "workspace:*",
     "@sinkr/tsconfig": "workspace:*",
-    "@types/node": "^22.10.1",
+    "@types/node": "^22.10.2",
     "eslint": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:"
@@ -29,6 +29,6 @@
     "@sinkr/validators": "npm:@jsr/sinkr__validators@0.2.1",
     "emittery": "^1.0.3",
     "undici": "^7.1.0",
-    "zod": "^3.24.0"
+    "zod": "^3.24.1"
   }
 }

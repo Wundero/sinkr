@@ -1,4 +1,3 @@
-/* eslint-disable turbo/no-undeclared-env-vars */
 import type { MessageEvent } from "undici";
 import type { z } from "zod";
 import { fetch, WebSocket } from "undici";
@@ -391,6 +390,24 @@ class Sourcerer {
 
 export type SinkrSource = Sourcerer;
 
+function withEnvFallback(
+  value: string | undefined,
+  ...keys: string[]
+): string | undefined {
+  if (value) {
+    return value;
+  }
+  if (typeof process === "undefined") {
+    return undefined;
+  }
+  for (const key of keys) {
+    if (process.env[key]) {
+      return process.env[key];
+    }
+  }
+  return undefined;
+}
+
 /**
  * Create a Sinkr source to send messages.
  * @param options The connection options. Will fall back to env vars if not provided.
@@ -398,9 +415,9 @@ export type SinkrSource = Sourcerer;
  * @throws If no URL or app key is provided.
  */
 export function source({
-  url = process.env.SINKR_URL,
-  appKey = process.env.SINKER_APP_KEY,
-  appId = process.env.SINKR_APP_ID,
+  url,
+  appKey,
+  appId,
 }:
   | {
       url?: string | undefined;
@@ -408,6 +425,19 @@ export function source({
       appId?: string | undefined;
     }
   | undefined = {}): SinkrSource {
+  url = withEnvFallback(
+    url,
+    "SINKR_URL",
+    "NEXT_PUBLIC_SINKR_URL",
+    "PUBLIC_SINKR_URL",
+  );
+  appKey = withEnvFallback(appKey, "SINKR_APP_KEY");
+  appId = withEnvFallback(
+    appId,
+    "SINKR_APP_ID",
+    "NEXT_PUBLIC_SINKR_APP_ID",
+    "PUBLIC_SINKR_APP_ID",
+  );
   if (!url) {
     throw new Error("Unable to start Sourcerer without a url!");
   }

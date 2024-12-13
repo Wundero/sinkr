@@ -1,4 +1,3 @@
-/* eslint-disable turbo/no-undeclared-env-vars */
 import type { z } from "zod";
 import Emittery from "emittery";
 
@@ -320,23 +319,54 @@ export interface SinkOptions {
   appId?: string | undefined;
 }
 
+function withEnvFallback(
+  value: string | undefined,
+  ...keys: string[]
+): string | undefined {
+  if (value) {
+    return value;
+  }
+  if (typeof process === "undefined") {
+    return undefined;
+  }
+  for (const key of keys) {
+    if (process.env[key]) {
+      return process.env[key];
+    }
+  }
+  return undefined;
+}
+
 /**
  * Connect to a Sinkr server over websockets.
  * @param options The connection options to use.
  * @returns The connected Sinkr client.
  */
 export function sink(options: SinkOptions | undefined = {}): Sinker {
-  const url = options.url ?? process.env.SINKR_URL;
+  const url = withEnvFallback(
+    options.url,
+    "SINKR_URL",
+    "NEXT_PUBLIC_SINKR_URL",
+    "PUBLIC_SINKR_URL",
+  );
   if (!url) {
     throw new Error("Unable to start Sinkr without a url!");
   }
-  const appId = options.appId ?? process.env.SINKR_APP_ID;
+  const appId = withEnvFallback(
+    options.appId,
+    "SINKR_APP_ID",
+    "NEXT_PUBLIC_SINKR_APP_ID",
+    "PUBLIC_SINKR_APP_ID",
+  );
   try {
     const parsedUrl = new URL(url);
     if (parsedUrl.protocol !== "ws:" && parsedUrl.protocol !== "wss:") {
       parsedUrl.protocol = "wss:";
     }
     if (parsedUrl.pathname === "/") {
+      if (!appId) {
+        throw new Error("No app ID provided for Sinkr!");
+      }
       parsedUrl.pathname = `/${appId}`;
     }
     return new BrowserSinker(parsedUrl.toString());
