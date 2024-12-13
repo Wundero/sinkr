@@ -31,7 +31,7 @@ importers:
         version: link:tooling/prettier
       '@turbo/gen':
         specifier: ^2.3.3
-        version: 2.3.3(@types/node@22.10.1)(typescript@5.7.2)
+        version: 2.3.3(@types/node@22.10.2)(typescript@5.7.2)
       prettier:
         specifier: 'catalog:'
         version: 3.4.1
@@ -245,8 +245,8 @@ importers:
         specifier: ^7.1.0
         version: 7.1.0
       zod:
-        specifier: ^3.24.0
-        version: 3.24.0
+        specifier: ^3.24.1
+        version: 3.24.1
     devDependencies:
       '@sinkr/eslint-config':
         specifier: workspace:*
@@ -258,8 +258,8 @@ importers:
         specifier: workspace:*
         version: link:../../tooling/typescript
       '@types/node':
-        specifier: ^22.10.1
-        version: 22.10.1
+        specifier: ^22.10.2
+        version: 22.10.2
       eslint:
         specifier: 'catalog:'
         version: 9.16.0(jiti@1.21.6)
@@ -310,8 +310,8 @@ importers:
   packages/validators:
     dependencies:
       zod:
-        specifier: ^3.24.0
-        version: 3.24.0
+        specifier: ^3.24.1
+        version: 3.24.1
     devDependencies:
       '@sinkr/eslint-config':
         specifier: workspace:*
@@ -1799,6 +1799,9 @@ packages:
 
   '@types/node@22.10.1':
     resolution: {integrity: sha512-qKgsUwfHZV2WCWLAnVP1JqnpE6Im6h3Y0+fYgMTasNQ7V++CBX5OT1as0g0f+OyubbFqhf6XVNIsmN4IIhEgGQ==}
+
+  '@types/node@22.10.2':
+    resolution: {integrity: sha512-Xxr6BBRCAOQixvonOye19wnzyDiUtTeqldOOmj3CkeblonbccA12PFwlufvRdrpjXxqnmUaeiU5EOA+7s5diUQ==}
 
   '@types/prop-types@15.7.13':
     resolution: {integrity: sha512-hCZTSvwbzWGvhqxp/RqVqwU999pBf2vp7hzIjiYOsl8wqOmUxkQ6ddw1cV3l8811+kdUFus/q4d1Y3E3SyEifA==}
@@ -4351,9 +4354,6 @@ packages:
     peerDependencies:
       zod: ^3.18.0
 
-  zod@3.24.0:
-    resolution: {integrity: sha512-Hz+wiY8yD0VLA2k/+nsg2Abez674dDGTai33SwNvMPuf9uIrBC9eFgIMQxBBbHFxVXi8W+5nX9DcAh9YNSQm/w==}
-
   zod@3.24.1:
     resolution: {integrity: sha512-muH7gBL9sI1nciMZV67X5fTKKBLtwpZ5VBp1vsOQzj1MhrBZ4wlVCm3gedKZWLp0Oyel8sIGfeiz54Su+OVT+A==}
 
@@ -5464,7 +5464,7 @@ snapshots:
 
   '@tsconfig/node16@1.0.4': {}
 
-  '@turbo/gen@2.3.3(@types/node@22.10.1)(typescript@5.7.2)':
+  '@turbo/gen@2.3.3(@types/node@22.10.2)(typescript@5.7.2)':
     dependencies:
       '@turbo/workspaces': 2.3.3
       commander: 10.0.1
@@ -5474,7 +5474,7 @@ snapshots:
       node-plop: 0.26.3
       picocolors: 1.0.1
       proxy-agent: 6.4.0
-      ts-node: 10.9.2(@types/node@22.10.1)(typescript@5.7.2)
+      ts-node: 10.9.2(@types/node@22.10.2)(typescript@5.7.2)
       update-check: 1.5.4
       validate-npm-package-name: 5.0.1
     transitivePeerDependencies:
@@ -5500,7 +5500,7 @@ snapshots:
 
   '@types/better-sqlite3@7.6.12':
     dependencies:
-      '@types/node': 22.10.1
+      '@types/node': 22.10.2
 
   '@types/cookie@0.6.0': {}
 
@@ -5518,7 +5518,7 @@ snapshots:
   '@types/glob@7.2.0':
     dependencies:
       '@types/minimatch': 5.1.2
-      '@types/node': 22.10.1
+      '@types/node': 22.10.2
 
   '@types/inquirer@6.5.0':
     dependencies:
@@ -5533,9 +5533,13 @@ snapshots:
 
   '@types/node-forge@1.3.11':
     dependencies:
-      '@types/node': 22.10.1
+      '@types/node': 22.10.2
 
   '@types/node@22.10.1':
+    dependencies:
+      undici-types: 6.20.0
+
+  '@types/node@22.10.2':
     dependencies:
       undici-types: 6.20.0
 
@@ -5556,7 +5560,7 @@ snapshots:
 
   '@types/through@0.0.33':
     dependencies:
-      '@types/node': 22.10.1
+      '@types/node': 22.10.2
 
   '@types/tinycolor2@1.4.6': {}
 
@@ -8110,6 +8114,25 @@ snapshots:
       typescript: 5.7.2
       v8-compile-cache-lib: 3.0.1
       yn: 3.1.1
+    optional: true
+
+  ts-node@10.9.2(@types/node@22.10.2)(typescript@5.7.2):
+    dependencies:
+      '@cspotcode/source-map-support': 0.8.1
+      '@tsconfig/node10': 1.0.11
+      '@tsconfig/node12': 1.0.11
+      '@tsconfig/node14': 1.0.3
+      '@tsconfig/node16': 1.0.4
+      '@types/node': 22.10.2
+      acorn: 8.14.0
+      acorn-walk: 8.3.4
+      arg: 4.1.3
+      create-require: 1.1.1
+      diff: 4.0.2
+      make-error: 1.3.6
+      typescript: 5.7.2
+      v8-compile-cache-lib: 3.0.1
+      yn: 3.1.1
 
   tsconfig-paths@3.15.0:
     dependencies:
@@ -8418,7 +8441,5 @@ snapshots:
   zod-validation-error@3.4.0(zod@3.24.1):
     dependencies:
       zod: 3.24.1
-
-  zod@3.24.0: {}
 
   zod@3.24.1: {}
