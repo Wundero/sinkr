@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sinkr"
-version = "0.1.3"
+version = "0.1.4"
 description = "Sinkr Python SDK"
 authors = ["Wundero <Wundero@users.noreply.github.com>"]
 readme = "README.md"

@@ -7,8 +7,8 @@ Usage:
 from sinkr import SinkrSource
 
 
-my_source = SinkrSource()
-my_source.send_to_channel("my-channel", "my-event", {
-    "my-data": 123
-})
+async with SinkrSource() as my_source:
+    await my_source.send_to_channel("my-channel", "my-event", {
+        "my-data": 123
+    })
 ```
