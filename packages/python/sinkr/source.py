@@ -115,7 +115,7 @@ class SinkrSource:
                         "data": part,
                     }
                     await self.ws_session.send(json.dumps(obj))
-                    resp = await self.ws_session.recv()
+                    resp = await self.ws_session.recv(True)
                     resp_obj = json.loads(resp)
                     resp_id = resp_obj.get("id")
                     if resp_id == part_id:
@@ -130,7 +130,7 @@ class SinkrSource:
                         "data": part,
                     }
                     await self.ws_session.send(json.dumps(obj))
-                    resp = await self.ws_session.recv()
+                    resp = await self.ws_session.recv(True)
                     resp_obj = json.loads(resp)
                     resp_id = resp_obj.get("id")
                     if resp_id == part_id:

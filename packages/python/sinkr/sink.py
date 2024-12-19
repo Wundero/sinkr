@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 from websockets.asyncio.client import connect
 from contextlib import AbstractAsyncContextManager
 import nanoid
+import asyncio
 
 
 class SinkrSink(AbstractAsyncContextManager):
@@ -64,9 +65,16 @@ class SinkrSink(AbstractAsyncContextManager):
         :return: A function to unsubscribe from the event. Does nothing if the event has already been received.
         """
 
-        def once_callback(data):
-            callback(data)
-            off(event, once_callback)
+        if asyncio.iscoroutinefunction(callback):
+
+            async def once_callback(data):
+                await callback(data)
+                off()
+        else:
+
+            def once_callback(data):
+                callback(data)
+                off(event, once_callback)
 
         off = self.on(event, once_callback)
         return off
@@ -83,14 +91,20 @@ class SinkrSink(AbstractAsyncContextManager):
         else:
             self.callbacks[event] = {}
 
-    def __trigger_callbacks(self, message: str):
+    async def __trigger_callbacks(self, message: str):
         data = json.loads(message)
         event = data["data"]["event"]
         relevant_callbacks = self.callbacks.get(event, {})
         for callback in relevant_callbacks.values():
-            callback(data["data"])
+            if asyncio.iscoroutinefunction(callback):
+                await callback(data["data"])
+            else:
+                callback(data["data"])
         for callback in self.global_callbacks.values():
-            callback(data["data"])
+            if asyncio.iscoroutinefunction(callback):
+                await callback(data["data"])
+            else:
+                callback(data["data"])
 
     async def __iter__messages(self):
         while True:
@@ -98,7 +112,7 @@ class SinkrSink(AbstractAsyncContextManager):
                 return
             message = await self.ws.recv(True)
             self.messages.append(message)
-            self.__trigger_callbacks(message)
+            await self.__trigger_callbacks(message)
 
     async def __aenter__(self):
         self.ws = await connect(self.url)
