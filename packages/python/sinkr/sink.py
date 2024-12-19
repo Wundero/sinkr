@@ -74,7 +74,7 @@ class SinkrSink(AbstractAsyncContextManager):
 
             def once_callback(data):
                 callback(data)
-                off(event, once_callback)
+                off()
 
         off = self.on(event, once_callback)
         return off
