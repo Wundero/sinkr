@@ -1,13 +1,15 @@
 from collections.abc import Mapping
 from typing import Optional
 from urllib.parse import urlparse
+from aiohttp import ClientSession
 import os
-import requests
 import json
 from requests.compat import basestring
+import uuid
+from websockets.asyncio.client import connect
 
 
-def stream_with_prelude(prelude, iterable):
+def augment_stream(prelude: dict, iterable):
     """
     Attach a prelude object to an iterable stream.
 
@@ -16,9 +18,10 @@ def stream_with_prelude(prelude, iterable):
 
     :return: A new stream with the prelude attached.
     """
-    yield json.dumps(prelude)
     for item in iterable:
-        yield json.dumps(item)
+        obj = prelude.copy()
+        obj["message"] = item
+        yield obj
 
 
 def data_is_stream(data):
@@ -29,9 +32,9 @@ def data_is_stream(data):
 
     :return: True if the data is a stream, False otherwise.
     """
-    return hasattr(data, "__iter__") and not isinstance(
-        data, (basestring, list, tuple, Mapping)
-    )
+    if isinstance(data, (basestring, list, tuple, Mapping, dict)):
+        return False
+    return hasattr(data, "__iter__") or hasattr(data, "__aiter__")
 
 
 class SinkrSource:
@@ -61,6 +64,7 @@ class SinkrSource:
             raise ValueError("Missing required parameters: url")
         if not app_key:
             raise ValueError("Missing required parameters: app_key")
+        self.app_key = app_key
         parsed_url = urlparse(url)
         if parsed_url.scheme != "http" and parsed_url.scheme != "https":
             scheme = "%s://" % parsed_url.scheme
@@ -71,23 +75,74 @@ class SinkrSource:
             raise ValueError("Missing app_id!")
         else:
             self.url = url
-        self.app_key = app_key
-        self.session = requests.Session()
-        self.session.headers.update({"Authorization": f"Bearer {app_key}"})
+        self.ws_url = (
+            self.url.replace("https://", "wss://", 1).replace("http://", "ws://", 1)
+            + "?appKey="
+            + app_key
+        )
+        self.ws_session = None
+        self.session = ClientSession()
+        self.session.headers.update({"Authorization": f"Bearer {self.app_key}"})
+        self.ready = False
 
-    def __fetch(self, body):
-        if data_is_stream(body):
-            res = self.session.post(
-                self.url,
-                data=body,
-                headers={"X-Sinkr-Stream": "true"},
+    async def __aenter__(self):
+        await self.session.__aenter__()
+        self.ws_session = await connect(self.ws_url)
+        await self.ws_session.__aenter__()
+        self.ready = True
+        return self
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        await self.session.__aexit__(exc_type, exc_value, traceback)
+        await self.ws_session.__aexit__(exc_type, exc_value, traceback)
+        self.ready = False
+
+    def __ensure_ready(self):
+        if not self.ready:
+            raise ValueError(
+                "SinkrSource is not ready. Use `async with` to initialize."
             )
-            return res.status_code
-        else:
-            res = self.session.post(self.url, json=body)
-            return res.status_code
 
-    def authenticate_user(self, peer_id: str, user_id: str, user_info: dict):
+    async def __fetch(self, body):
+        self.__ensure_ready()
+        if data_is_stream(body):
+            resps = []
+            if hasattr(body, "__aiter__"):
+                async for part in body:
+                    part_id = uuid.uuid4().hex
+                    obj = {
+                        "id": part_id,
+                        "data": part,
+                    }
+                    await self.ws_session.send(json.dumps(obj))
+                    resp = await self.ws_session.recv()
+                    resp_obj = json.loads(resp)
+                    resp_id = resp_obj.get("id")
+                    if resp_id == part_id:
+                        resps.append(resp_obj.get("status", 500))
+                    else:
+                        pass
+            else:
+                for part in body:
+                    part_id = uuid.uuid4().hex
+                    obj = {
+                        "id": part_id,
+                        "data": part,
+                    }
+                    await self.ws_session.send(json.dumps(obj))
+                    resp = await self.ws_session.recv()
+                    resp_obj = json.loads(resp)
+                    resp_id = resp_obj.get("id")
+                    if resp_id == part_id:
+                        resps.append(resp_obj.get("status", 500))
+                    else:
+                        pass
+            return resps
+        else:
+            async with self.session.post(self.url, json=body) as res:
+                return res.status_code
+
+    async def authenticate_user(self, peer_id: str, user_id: str, user_info: dict):
         """
         Authenticate a user with Sinkr.
 
@@ -105,7 +160,7 @@ class SinkrSource:
         }
         return self.__fetch(body)
 
-    def subscribe_to_channel(self, user_id: str, channel: str):
+    async def subscribe_to_channel(self, user_id: str, channel: str):
         """
         Subscribe a user to a channel. If the channel is a private or presence channel, the user must be authenticated.
 
@@ -121,7 +176,7 @@ class SinkrSource:
         }
         return self.__fetch(body)
 
-    def unsubscribe_from_channel(self, user_id: str, channel: str):
+    async def unsubscribe_from_channel(self, user_id: str, channel: str):
         """
         Unsubscribe a user from a channel.
 
@@ -137,7 +192,7 @@ class SinkrSource:
         }
         return self.__fetch(body)
 
-    def send_message_to_channel(self, channel: str, event: str, message):
+    async def send_message_to_channel(self, channel: str, event: str, message):
         """
         Send a message to a channel.
 
@@ -153,11 +208,11 @@ class SinkrSource:
             "channel": channel,
         }
         if data_is_stream(message):
-            return self.__fetch(stream_with_prelude(body, message))
+            return self.__fetch(augment_stream(body, message))
         body["message"] = message
         return self.__fetch(body)
 
-    def send_message_to_user(self, user_id: str, event: str, message):
+    async def send_message_to_user(self, user_id: str, event: str, message):
         """
         Send a message to a user.
 
@@ -173,11 +228,11 @@ class SinkrSource:
             "recipientId": user_id,
         }
         if data_is_stream(message):
-            return self.__fetch(stream_with_prelude(body, message))
+            return self.__fetch(augment_stream(body, message))
         body["message"] = message
         return self.__fetch(body)
 
-    def broadcast_message(self, event: str, message):
+    async def broadcast_message(self, event: str, message):
         """
         Broadcast a message to all users.
 
@@ -191,6 +246,6 @@ class SinkrSource:
             "event": event,
         }
         if data_is_stream(message):
-            return self.__fetch(stream_with_prelude(body, message))
+            return self.__fetch(augment_stream(body, message))
         body["message"] = message
         return self.__fetch(body)
