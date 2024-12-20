@@ -158,7 +158,7 @@ class SinkrSource:
             "id": user_id,
             "userInfo": user_info,
         }
-        return self.__fetch(body)
+        return await self.__fetch(body)
 
     async def subscribe_to_channel(self, user_id: str, channel: str):
         """
@@ -174,7 +174,7 @@ class SinkrSource:
             "subscriberId": user_id,
             "channel": channel,
         }
-        return self.__fetch(body)
+        return await self.__fetch(body)
 
     async def unsubscribe_from_channel(self, user_id: str, channel: str):
         """
@@ -190,7 +190,7 @@ class SinkrSource:
             "subscriberId": user_id,
             "channel": channel,
         }
-        return self.__fetch(body)
+        return await self.__fetch(body)
 
     async def send_message_to_channel(self, channel: str, event: str, message):
         """
@@ -208,9 +208,9 @@ class SinkrSource:
             "channel": channel,
         }
         if data_is_stream(message):
-            return self.__fetch(augment_stream(body, message))
+            return await self.__fetch(augment_stream(body, message))
         body["message"] = message
-        return self.__fetch(body)
+        return await self.__fetch(body)
 
     async def send_message_to_user(self, user_id: str, event: str, message):
         """
@@ -228,9 +228,9 @@ class SinkrSource:
             "recipientId": user_id,
         }
         if data_is_stream(message):
-            return self.__fetch(augment_stream(body, message))
+            return await self.__fetch(augment_stream(body, message))
         body["message"] = message
-        return self.__fetch(body)
+        return await self.__fetch(body)
 
     async def broadcast_message(self, event: str, message):
         """
@@ -246,6 +246,6 @@ class SinkrSource:
             "event": event,
         }
         if data_is_stream(message):
-            return self.__fetch(augment_stream(body, message))
+            return await self.__fetch(augment_stream(body, message))
         body["message"] = message
-        return self.__fetch(body)
+        return await self.__fetch(body)
