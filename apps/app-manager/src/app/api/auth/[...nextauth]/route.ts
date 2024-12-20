@@ -8,7 +8,23 @@ function rewriteRequestUrl(req: NextRequest) {
   req.nextUrl.port = baseUrl.port;
   req.nextUrl.hostname = baseUrl.hostname;
   req.nextUrl.protocol = baseUrl.protocol;
-  return new NextRequest(req.nextUrl, req);
+  const newReq = new NextRequest(req.nextUrl, {
+    method: req.method,
+    headers: req.headers,
+    body: req.body,
+    cache: req.cache,
+    cf: req.cf,
+    credentials: req.credentials,
+    redirect: req.redirect,
+    fetcher: req.fetcher,
+    integrity: req.integrity,
+    keepalive: req.keepalive,
+    mode: req.mode,
+    referrer: req.referrer,
+    referrerPolicy: req.referrerPolicy,
+    signal: req.signal,
+  });
+  return newReq;
 }
 
 const { GET: _get, POST: _post } = handlers;
