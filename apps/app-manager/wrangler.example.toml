@@ -15,6 +15,9 @@ routes = [
   { pattern = "<your domain>", custom_domain = true }
 ]
 
+[observability.logs]
+enabled = true
+
 [vars]
 DEPLOYMENT_ENV="production"
 DEPLOYMENT_URL="https://<your domain>"
