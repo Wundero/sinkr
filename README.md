@@ -1,6 +1,9 @@
 # Sinkr
 Synchronize data to your clients in real time with websockets. Deploy on your own infrastructure!
 
+## WIP
+This library is WIP as I test things to make sure they work, with the goal of achieving near parity with Pusher. Use at your own risk, but if you do run into problems, PRs/issues are welcome :)
+
 ## How to use
 To deploy your own Sinkr instance, follow these steps:
 
