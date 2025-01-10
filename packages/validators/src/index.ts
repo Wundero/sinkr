@@ -13,10 +13,10 @@ import {
   ClientReceiveMetadataSchema as clientReceiveMetadataSchema,
   ClientReceiveSchema as clientReceiveSchema,
   DirectMessageSchema as directMessageSchema,
+  MessageTypeSchema as messageTypeSchema,
   ServerEndpointSchema as serverEndpointSchema,
   SubscribeRouteSchema as subscribeRouteSchema,
   UnsubscribeRouteSchema as unsubscribeRouteSchema,
-  MessageTypeSchema as messageTypeSchema,
 } from "./schemas";
 
 export const AuthenticateRouteSchema: typeof authenticateRouteSchema =
