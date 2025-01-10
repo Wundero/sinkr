@@ -16,6 +16,7 @@ import {
   ServerEndpointSchema as serverEndpointSchema,
   SubscribeRouteSchema as subscribeRouteSchema,
   UnsubscribeRouteSchema as unsubscribeRouteSchema,
+  MessageTypeSchema as messageTypeSchema,
 } from "./schemas";
 
 export const AuthenticateRouteSchema: typeof authenticateRouteSchema =
@@ -51,3 +52,4 @@ export const ClientReceiveMessageSchema: typeof clientReceiveMessageSchema =
   clientReceiveMessageSchema;
 export const ClientReceiveSchema: typeof clientReceiveSchema =
   clientReceiveSchema;
+export const MessageTypeSchema: typeof messageTypeSchema = messageTypeSchema;
