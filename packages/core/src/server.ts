@@ -1,11 +1,15 @@
 import type { MessageEvent } from "undici";
 import type { z } from "zod";
+import { encodeBase64url } from "@oslojs/encoding";
 import { fetch, WebSocket } from "undici";
 
-import type { ServerEndpointSchema } from "@sinkr/validators";
+import type {
+  MessageTypeSchema,
+  ServerEndpointSchema,
+} from "@sinkr/validators";
 
 import type { RealEventMap } from "./event-fallback";
-import type { UserInfo } from "./types";
+import type { EncryptionInput, UserInfo } from "./types";
 
 type SendDataParam = z.infer<typeof ServerEndpointSchema>;
 
@@ -82,16 +86,172 @@ function toReadableStream<T>(input: ReadableInput<T>): ReadableStream<T> {
   return input;
 }
 
-function prepareStream(shape: object, stream: ReadableStream<unknown>) {
+function prepareStream(
+  shape: object,
+  stream: ReadableStream<unknown>,
+  key?: EncryptionInput,
+) {
+  let index = 0;
   const transformer = new TransformStream<unknown, object>({
-    transform(chunk, controller) {
+    async transform(chunk, controller) {
       controller.enqueue({
         ...shape,
-        message: chunk,
+        message: await getMessageContent(chunk, key, index),
       });
+      index++;
     },
   });
   return stream.pipeThrough(transformer);
+}
+
+const SUPPORTED_HASHES = ["256", "384", "512"];
+
+async function importRSAJWK(key: JsonWebKey) {
+  if (key.kty !== "RSA" || !key.alg) {
+    throw new Error("Invalid key type");
+  }
+  const [_, algSubtype, hash] = key.alg.split("-");
+  if (algSubtype !== "OAEP" || !hash) {
+    throw new Error("Invalid key type");
+  }
+  if (!SUPPORTED_HASHES.includes(hash)) {
+    throw new Error("Unsupported hash");
+  }
+  if (!key.key_ops?.includes("encrypt")) {
+    throw new Error("Key does not support encryption");
+  }
+  return await crypto.subtle.importKey(
+    "jwk",
+    key,
+    {
+      name: "RSA-OAEP",
+      hash: `SHA-${hash}`,
+    },
+    true,
+    key.key_ops as KeyUsage[],
+  );
+}
+
+async function importAESGCMJWK(key: JsonWebKey) {
+  if (key.kty !== "oct") {
+    throw new Error("Invalid key type");
+  }
+  if (!key.key_ops?.includes("encrypt")) {
+    throw new Error("Key does not support encryption");
+  }
+  if (key.alg !== "A256GCM") {
+    throw new Error("Unsupported algorithm");
+  }
+  return await crypto.subtle.importKey(
+    "jwk",
+    key,
+    {
+      name: "AES-GCM",
+    },
+    true,
+    key.key_ops as KeyUsage[],
+  );
+}
+
+async function importUnknownJWK(key: JsonWebKey | CryptoKey) {
+  if (key instanceof CryptoKey) {
+    if (!key.usages.includes("encrypt")) {
+      throw new Error("Key does not support encryption");
+    }
+    switch (key.algorithm.name) {
+      case "RSA-OAEP":
+      case "AES-GCM":
+        return key;
+    }
+    throw new Error("Unsupported key type");
+  }
+  if (!key.kty) {
+    throw new Error("Invalid key type");
+  }
+  if (key.kty === "RSA") {
+    return await importRSAJWK(key);
+  }
+  if (key.kty === "oct") {
+    return await importAESGCMJWK(key);
+  }
+  throw new Error("Unsupported key type");
+}
+
+async function encrypt(message: Uint8Array, key: CryptoKey) {
+  if (key.algorithm.name === "AES-GCM") {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const encrypted = await crypto.subtle.encrypt(
+      {
+        name: key.algorithm.name,
+        iv,
+      },
+      key,
+      message,
+    );
+    const ivs = encodeBase64url(iv);
+    const es = encodeBase64url(new Uint8Array(encrypted));
+    return `${ivs}.${es}`;
+  }
+  const encrypted = await crypto.subtle.encrypt(
+    {
+      name: key.algorithm.name,
+    },
+    key,
+    message,
+  );
+  return encodeBase64url(new Uint8Array(encrypted));
+}
+
+async function getMessageContent(
+  data: unknown,
+  keyData: EncryptionInput | undefined,
+  index?: number,
+): Promise<z.infer<typeof MessageTypeSchema>> {
+  if (!keyData) {
+    if (index !== undefined) {
+      return {
+        type: "chunk",
+        index,
+        message: data,
+      };
+    }
+    return {
+      type: "plain",
+      message: data,
+    };
+  }
+  try {
+    const imported = await importUnknownJWK(keyData.key);
+    const stringified = JSON.stringify(data);
+    const encoded = new TextEncoder().encode(stringified);
+    const ciphertext = await encrypt(encoded, imported);
+    if (index !== undefined) {
+      return {
+        type: "encrypted-chunk",
+        index,
+        ciphertext: ciphertext,
+        keyId: keyData.keyId,
+      };
+    }
+    return {
+      type: "encrypted",
+      ciphertext: ciphertext,
+      keyId: keyData.keyId,
+    };
+  } catch (e) {
+    console.error(e);
+    if (index !== undefined) {
+      return {
+        type: "chunk",
+        index,
+        message: data,
+      };
+    }
+    return {
+      type: "plain",
+      message: data,
+    };
+  }
 }
 
 class Sourcerer {
@@ -134,16 +294,18 @@ class Sourcerer {
     data: TData,
   ): Promise<number>;
   private async sendData<TData extends SendDataParam>(
-    data: TData,
+    data: TData extends { message: unknown } ? Omit<TData, "message"> : TData,
     iterable: ReadableInput<unknown>,
+    key?: EncryptionInput,
   ): Promise<number[]>;
   private async sendData<TData extends SendDataParam>(
     data: TData,
     iterable?: ReadableInput<unknown>,
+    key?: EncryptionInput,
   ) {
     if (iterable) {
       const stream = toReadableStream(iterable);
-      const encodedStream = prepareStream(data, stream);
+      const encodedStream = prepareStream(data, stream, key);
       const ws = await this.connectWS();
       const reader = encodedStream.getReader();
       const statuses = new Map<string, number>();
@@ -273,12 +435,17 @@ class Sourcerer {
   async sendToChannel<
     TEvent extends keyof RealEventMap,
     TData extends RealEventMap[TEvent],
-  >(channel: string, event: TEvent, message: TData): Promise<number> {
+  >(
+    channel: string,
+    event: TEvent,
+    message: TData,
+    key?: EncryptionInput,
+  ): Promise<number> {
     return await this.sendData({
       route: "channel",
       channel,
       event: `${event}`,
-      message,
+      message: await getMessageContent(message, key),
     });
   }
 
@@ -296,6 +463,7 @@ class Sourcerer {
     channel: string,
     event: TEvent,
     data: ReadableInput<TData>,
+    key?: EncryptionInput,
   ): Promise<number[]> {
     return await this.sendData(
       {
@@ -304,6 +472,7 @@ class Sourcerer {
         event: `${event}`,
       },
       data,
+      key,
     );
   }
 
@@ -317,12 +486,17 @@ class Sourcerer {
   async directMessage<
     TEvent extends keyof RealEventMap,
     TData extends RealEventMap[TEvent],
-  >(userId: string, event: TEvent, message: TData): Promise<number> {
+  >(
+    userId: string,
+    event: TEvent,
+    message: TData,
+    key?: EncryptionInput,
+  ): Promise<number> {
     return await this.sendData({
       route: "direct",
       recipientId: userId,
       event: `${event}`,
-      message,
+      message: await getMessageContent(message, key),
     });
   }
 
@@ -340,6 +514,7 @@ class Sourcerer {
     userId: string,
     event: TEvent,
     data: ReadableInput<TData>,
+    key?: EncryptionInput,
   ): Promise<number[]> {
     return await this.sendData(
       {
@@ -348,6 +523,7 @@ class Sourcerer {
         event: `${event}`,
       },
       data,
+      key,
     );
   }
 
@@ -360,11 +536,11 @@ class Sourcerer {
   async broadcastMessage<
     TEvent extends keyof RealEventMap,
     TData extends RealEventMap[TEvent],
-  >(event: TEvent, message: TData): Promise<number> {
+  >(event: TEvent, message: TData, key?: EncryptionInput): Promise<number> {
     return await this.sendData({
       route: "broadcast",
       event: `${event}`,
-      message,
+      message: await getMessageContent(message, key),
     });
   }
 
@@ -377,13 +553,18 @@ class Sourcerer {
   async streamBroadcastMessage<
     TEvent extends keyof RealEventMap,
     TData extends RealEventMap[TEvent],
-  >(event: TEvent, data: ReadableInput<TData>): Promise<number[]> {
+  >(
+    event: TEvent,
+    data: ReadableInput<TData>,
+    key?: EncryptionInput,
+  ): Promise<number[]> {
     return await this.sendData(
       {
         route: "broadcast",
         event: `${event}`,
       },
       data,
+      key,
     );
   }
 }

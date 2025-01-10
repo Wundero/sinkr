@@ -241,9 +241,12 @@ importers:
 
   packages/core:
     dependencies:
+      '@oslojs/encoding':
+        specifier: ^1.1.0
+        version: 1.1.0
       '@sinkr/validators':
-        specifier: npm:@jsr/sinkr__validators@0.2.2
-        version: '@jsr/sinkr__validators@0.2.2'
+        specifier: npm:@jsr/sinkr__validators@0.3.1
+        version: '@jsr/sinkr__validators@0.3.1'
       emittery:
         specifier: ^1.0.3
         version: 1.0.3
@@ -1603,6 +1606,9 @@ packages:
   '@jsr/sinkr__validators@0.2.2':
     resolution: {integrity: sha512-H3WbKmoOQyWzaneaMt1xd3JOgD85cEsVBtqLQSxdWLHB8Rzfiqrd9q/LaUhc0DgRUkIYdoYw3Jz0P0H/S/lhbQ==, tarball: https://npm.jsr.io/~/11/@jsr/sinkr__validators/0.2.2.tgz}
 
+  '@jsr/sinkr__validators@0.3.1':
+    resolution: {integrity: sha512-3U7ul/AxRwQdXNVlaKAvh4vCkicUd/+CL8L2UeQ/+T5nI0GtTg5gc0Ho60AmnXTFMNNhuVQYCTwC2vUBLjYrXg==, tarball: https://npm.jsr.io/~/11/@jsr/sinkr__validators/0.3.1.tgz}
+
   '@miniflare/core@2.14.4':
     resolution: {integrity: sha512-FMmZcC1f54YpF4pDWPtdQPIO8NXfgUxCoR9uyrhxKJdZu7M6n8QKopPVNuaxR40jcsdxb7yKoQoFWnHfzJD9GQ==}
     engines: {node: '>=16.13'}
@@ -1739,6 +1745,9 @@ packages:
     peerDependencies:
       rimraf: ^6.0.1
       wrangler: ^3.99.0
+
+  '@oslojs/encoding@1.1.0':
+    resolution: {integrity: sha512-70wQhgYmndg4GCPxPPxPGevRKqTIJ2Nh4OkiMWmDAVYsTQ+Ta7Sq+rPevXyXGdzr30/qZBnyOalCszoMxlyldQ==}
 
   '@panva/hkdf@1.2.1':
     resolution: {integrity: sha512-6oclG6Y3PiDFcoyk8srjLfVKyMfVCKJ27JwNPViuXziFpmdz+MZnZN/aKY0JGXgYuO/VghU0jcOAZgWXZ1Dmrw==}
@@ -6489,6 +6498,10 @@ snapshots:
     dependencies:
       zod: 3.24.1
 
+  '@jsr/sinkr__validators@0.3.1':
+    dependencies:
+      zod: 3.24.1
+
   '@miniflare/core@2.14.4':
     dependencies:
       '@iarna/toml': 2.2.5
@@ -6645,6 +6658,8 @@ snapshots:
     transitivePeerDependencies:
       - aws-crt
       - supports-color
+
+  '@oslojs/encoding@1.1.0': {}
 
   '@panva/hkdf@1.2.1': {}
 

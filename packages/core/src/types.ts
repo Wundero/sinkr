@@ -47,3 +47,11 @@ export const connectSymbol: unique symbol = Symbol("sinkr-connect");
  * Built-in event for when the client disconnects from Sinkr.
  */
 export const disconnectSymbol: unique symbol = Symbol("sinkr-disconnect");
+
+/**
+ * Type which represents an encryption key to be used to either encrypt or decrypt messages.
+ */
+export interface EncryptionInput {
+  keyId: string;
+  key: JsonWebKey | CryptoKey;
+}
