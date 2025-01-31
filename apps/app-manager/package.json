@@ -53,6 +53,7 @@
     "@sinkr/eslint-config": "workspace:*",
     "@sinkr/prettier-config": "workspace:*",
     "@sinkr/tsconfig": "workspace:*",
+    "@tailwindcss/postcss": "^4.0.1",
     "@types/node": "catalog:",
     "@types/react": "npm:types-react@rc",
     "@types/react-dom": "npm:types-react-dom@rc",
@@ -62,7 +63,7 @@
     "eslint-config-next": "15.1.6",
     "postcss": "^8.5.1",
     "prettier": "catalog:",
-    "tailwindcss": "^3.4.17",
+    "tailwindcss": "^4.0.1",
     "typescript": "catalog:",
     "wrangler": "^3.107.0"
   }
