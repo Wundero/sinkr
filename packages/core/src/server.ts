@@ -302,7 +302,15 @@ class SinkrSource {
    * @param channel The channel to subscribe to.
    * @returns The HTTP status code Sinkr returned.
    */
-  async subscribeToChannel(userId: string, channel: string): Promise<number> {
+  async subscribeToChannel(
+    userId: string,
+    channel:
+      | string
+      | {
+          name: string;
+          flags: number;
+        },
+  ): Promise<number> {
     return await this.sendData({
       route: "subscribe",
       subscriberId: userId,
@@ -318,7 +326,12 @@ class SinkrSource {
    */
   async unsubscribeFromChannel(
     userId: string,
-    channel: string,
+    channel:
+      | string
+      | {
+          name: string;
+          flags: number;
+        },
   ): Promise<number> {
     return await this.sendData({
       route: "unsubscribe",
@@ -338,7 +351,12 @@ class SinkrSource {
     TEvent extends keyof RealEventMap,
     TData extends RealEventMap[TEvent],
   >(
-    channel: string,
+    channel:
+      | string
+      | {
+          name: string;
+          flags: number;
+        },
     event: TEvent,
     message: TData,
     key?: EncryptionInput,
@@ -362,7 +380,12 @@ class SinkrSource {
     TEvent extends keyof RealEventMap,
     TData extends RealEventMap[TEvent],
   >(
-    channel: string,
+    channel:
+      | string
+      | {
+          name: string;
+          flags: number;
+        },
     event: TEvent,
     data: ReadableInput<TData>,
     key?: EncryptionInput,

@@ -1,6 +1,6 @@
 {
   "name": "@sinkr/core",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "type": "module",
   "main": "src/index.ts",
   "exports": {
@@ -27,7 +27,7 @@
   "prettier": "@sinkr/prettier-config",
   "dependencies": {
     "@oslojs/encoding": "^1.1.0",
-    "@sinkr/validators": "npm:@jsr/sinkr__validators@0.3.1",
+    "@sinkr/validators": "npm:@jsr/sinkr__validators@0.4.0",
     "emittery": "^1.1.0",
     "undici": "^7.3.0",
     "zod": "^3.24.1"
