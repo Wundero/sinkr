@@ -139,7 +139,9 @@ class SinkrSource:
                         pass
             return resps
         else:
-            async with self.session.post(self.url, json=body) as res:
+            async with self.session.post(
+                self.url, json={"data": body, "id": uuid.uuid4().hex}
+            ) as res:
                 return res.status
 
     async def authenticate_user(self, peer_id: str, user_id: str, user_info: dict):
