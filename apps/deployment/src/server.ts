@@ -7,10 +7,20 @@ import type {
   ClientReceiveSchema,
   ServerEndpointSchema,
 } from "@sinkr/validators";
+import {
+  channelRequiresAuthentication,
+  isPresenceChannel,
+  shouldChannelStoreMessages,
+  toChannel,
+} from "@sinkr/validators";
 
-import { peerChannelSubscriptions, peers } from "./db/schema";
+import {
+  peerChannelSubscriptions,
+  peers,
+  storedChannelMessages,
+} from "./db/schema";
 import { hooks } from "./hooks";
-import { getDB, requiresAuthentication } from "./utils";
+import { getDB } from "./utils";
 
 type ServerMessage = z.infer<typeof ServerEndpointSchema>;
 
@@ -50,7 +60,11 @@ export function sendToPeer(peer: Peer, message: ClientReception) {
   peer.send(message);
 }
 
-export async function handleSource(data: ServerMessage, appId: string) {
+export async function handleSource(
+  messageId: string,
+  data: ServerMessage,
+  appId: string,
+) {
   const db = getDB();
   switch (data.route) {
     case "authenticate": {
@@ -77,6 +91,7 @@ export async function handleSource(data: ServerMessage, appId: string) {
       peers.forEach((peer) => {
         if (peerIdSet.has(peer.id)) {
           sendToPeer(peer, {
+            id: messageId,
             source: "message",
             data: {
               event: data.event,
@@ -91,21 +106,36 @@ export async function handleSource(data: ServerMessage, appId: string) {
       return new Response("OK", { status: 200 });
     }
     case "channel": {
+      const ch = toChannel(data.channel);
       const subscriptions = await db.query.peerChannelSubscriptions.findMany({
         where: (s, ops) =>
-          ops.and(ops.eq(s.appId, appId), ops.eq(s.channel, data.channel)),
+          ops.and(
+            ops.eq(s.appId, appId),
+            ops.eq(s.channel, ch.name),
+            ops.eq(s.channelFlags, ch.flags),
+          ),
       });
+      if (shouldChannelStoreMessages(ch)) {
+        await db.insert(storedChannelMessages).values({
+          id: messageId,
+          appId,
+          channel: ch.name,
+          channelFlags: ch.flags,
+          data,
+        });
+      }
       const peers = getPeerMap();
       subscriptions.forEach((sub) => {
         const peer = peers.get(sub.peerId);
         if (peer) {
           sendToPeer(peer, {
             source: "message",
+            id: messageId,
             data: {
               event: data.event,
               from: {
                 source: "channel",
-                channel: data.channel,
+                channel: ch,
               },
               message: data.message,
             },
@@ -134,6 +164,7 @@ export async function handleSource(data: ServerMessage, appId: string) {
       }
       sendToPeer(peer, {
         source: "message",
+        id: messageId,
         data: {
           event: data.event,
           from: {
@@ -145,6 +176,7 @@ export async function handleSource(data: ServerMessage, appId: string) {
       return new Response("OK", { status: 200 });
     }
     case "subscribe": {
+      const ch = toChannel(data.channel);
       const dbPeer = await db.query.peers.findFirst({
         where: (p, ops) =>
           ops.and(
@@ -158,7 +190,7 @@ export async function handleSource(data: ServerMessage, appId: string) {
       if (!dbPeer) {
         return new Response("Not found", { status: 404 });
       }
-      if (requiresAuthentication(data.channel)) {
+      if (channelRequiresAuthentication(ch)) {
         if (!dbPeer.authenticatedUserId) {
           return new Response("Unauthorized", { status: 401 });
         }
@@ -173,24 +205,27 @@ export async function handleSource(data: ServerMessage, appId: string) {
         .where(
           and(
             eq(peers.appId, appId),
-            eq(peerChannelSubscriptions.channel, data.channel),
+            eq(peerChannelSubscriptions.channel, ch.name),
+            eq(peerChannelSubscriptions.channelFlags, ch.flags),
           ),
         );
       await db.insert(peerChannelSubscriptions).values({
         appId,
         peerId: dbPeer.id,
-        channel: data.channel,
+        channel: ch.name,
+        channelFlags: ch.flags,
       });
-      const isPresence = data.channel.startsWith("presence-");
+      const isPresence = isPresenceChannel(ch);
       const peerMap = getPeerMap();
       const mainPeer = peerMap.get(dbPeer.id);
       if (mainPeer) {
         if (isPresence) {
           sendToPeer(mainPeer, {
             source: "metadata",
+            id: messageId,
             data: {
               event: "join-presence-channel",
-              channel: data.channel,
+              channel: ch,
               members: existingSubs.map((s) => ({
                 id: s.peer.authenticatedUserId ?? s.peer.id,
                 userInfo: s.peer.userInfo,
@@ -200,9 +235,10 @@ export async function handleSource(data: ServerMessage, appId: string) {
         } else {
           sendToPeer(mainPeer, {
             source: "metadata",
+            id: messageId,
             data: {
               event: "count",
-              channel: data.channel,
+              channel: ch,
               count: existingSubs.length + 1,
             },
           });
@@ -214,9 +250,10 @@ export async function handleSource(data: ServerMessage, appId: string) {
           if (isPresence) {
             sendToPeer(peer, {
               source: "metadata",
+              id: messageId,
               data: {
                 event: "member-join",
-                channel: data.channel,
+                channel: ch,
                 member: {
                   id: dbPeer.authenticatedUserId ?? dbPeer.id,
                   userInfo: dbPeer.userInfo,
@@ -226,9 +263,10 @@ export async function handleSource(data: ServerMessage, appId: string) {
           } else {
             sendToPeer(peer, {
               source: "metadata",
+              id: messageId,
               data: {
                 event: "count",
-                channel: data.channel,
+                channel: ch,
                 count: existingSubs.length + 1,
               },
             });
@@ -251,12 +289,14 @@ export async function handleSource(data: ServerMessage, appId: string) {
       if (!dbPeer) {
         return new Response("Not found", { status: 404 });
       }
+      const ch = toChannel(data.channel);
       const isInChannel = await db.query.peerChannelSubscriptions.findFirst({
         where: (s, ops) =>
           ops.and(
             ops.eq(s.appId, appId),
             ops.eq(s.peerId, dbPeer.id),
-            ops.eq(s.channel, data.channel),
+            ops.eq(s.channel, ch.name),
+            ops.eq(s.channelFlags, ch.flags),
           ),
       });
       if (!isInChannel) {
@@ -275,18 +315,20 @@ export async function handleSource(data: ServerMessage, appId: string) {
         .where(
           and(
             eq(peers.appId, appId),
-            eq(peerChannelSubscriptions.channel, data.channel),
+            eq(peerChannelSubscriptions.channel, ch.name),
+            eq(peerChannelSubscriptions.channelFlags, ch.flags),
           ),
         );
       const peerMap = getPeerMap();
       const mainPeer = peerMap.get(dbPeer.id);
-      const isPresence = data.channel.startsWith("presence-");
+      const isPresence = isPresenceChannel(ch);
       if (mainPeer) {
         sendToPeer(mainPeer, {
           data: {
             event: "leave-channel",
-            channel: data.channel,
+            channel: ch,
           },
+          id: messageId,
           source: "metadata",
         });
       }
@@ -296,9 +338,10 @@ export async function handleSource(data: ServerMessage, appId: string) {
           if (isPresence) {
             sendToPeer(peer, {
               source: "metadata",
+              id: messageId,
               data: {
                 event: "member-leave",
-                channel: data.channel,
+                channel: ch,
                 member: {
                   id: dbPeer.authenticatedUserId ?? dbPeer.id,
                   userInfo: dbPeer.userInfo,
@@ -308,9 +351,10 @@ export async function handleSource(data: ServerMessage, appId: string) {
           } else {
             sendToPeer(peer, {
               source: "metadata",
+              id: messageId,
               data: {
                 event: "count",
-                channel: data.channel,
+                channel: ch,
                 count: remainingSubs.length,
               },
             });

@@ -45,13 +45,17 @@ export class $DurableObject extends DurableObject {
     if (request.method !== "POST") {
       return new Response("Method not allowed", { status: 405 });
     }
-    const body = await request.json().catch(() => null);
+    const bodyBuf = (await request.json().catch(() => null)) as {
+      data: unknown;
+      id: string;
+    };
+    const { data: body, id } = bodyBuf;
     const parsed = ServerEndpointSchema.safeParse(body);
     if (!parsed.success) {
       return new Response("Invalid request", { status: 400 });
     }
     const data = parsed.data;
-    return handleSource(data, appId);
+    return handleSource(id, data, appId);
   }
 
   webSocketMessage(client: WebSocket, message: string | ArrayBuffer) {

@@ -18,13 +18,3 @@ export function getDB() {
   }
   return db;
 }
-
-export function requiresAuthentication(channelName: string) {
-  if (channelName.startsWith("private-")) {
-    return true;
-  }
-  if (channelName.startsWith("presence-")) {
-    return true;
-  }
-  return false;
-}

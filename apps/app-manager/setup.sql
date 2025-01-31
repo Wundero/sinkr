@@ -61,6 +61,7 @@ CREATE TABLE
         `appId` text NOT NULL,
         `peerId` text NOT NULL,
         `channel` text NOT NULL,
+        `channelFlags` integer DEFAULT 0 NOT NULL,
         FOREIGN KEY (`appId`) REFERENCES `app` (`id`) ON UPDATE no action ON DELETE cascade,
         FOREIGN KEY (`peerId`) REFERENCES `peer` (`id`) ON UPDATE no action ON DELETE cascade
     );
@@ -88,3 +89,19 @@ CREATE INDEX IF NOT EXISTS `peer_appIdx` ON `peer` (`appId`);
 CREATE INDEX IF NOT EXISTS `peer_authIdx` ON `peer` (`authenticatedUserId`);
 
 CREATE UNIQUE INDEX IF NOT EXISTS `peer_unique` ON `peer` (`id`, `appId`);
+
+CREATE TABLE
+    `storedChannelMessages` (
+        `id` text PRIMARY KEY NOT NULL,
+        `appId` text NOT NULL,
+        `channel` text NOT NULL,
+        `channelFlags` integer DEFAULT 0 NOT NULL,
+        `data` blob NOT NULL,
+        FOREIGN KEY (`appId`) REFERENCES `app` (`id`) ON UPDATE no action ON DELETE cascade
+    );
+
+CREATE INDEX `appIdx` ON `scm_storedChannelMessages` (`appId`);
+
+CREATE INDEX `channelIdx` ON `scm_storedChannelMessages` (`channel`);
+
+CREATE INDEX `comboIdx` ON `scm_storedChannelMessages` (`appId`, `channel`);

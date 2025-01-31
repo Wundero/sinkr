@@ -240,8 +240,8 @@ class SinkrSource {
         );
       }
     } else {
+      const id = crypto.randomUUID();
       if (this.wsClient && this.wsClient.readyState === WebSocket.OPEN) {
-        const id = crypto.randomUUID();
         return new Promise<number>((res) => {
           const onMsg = (ev: MessageEvent) => {
             const data = JSON.parse(ev.data as string) as {
@@ -265,7 +265,7 @@ class SinkrSource {
       }
       const res = await fetch(this.url, {
         method: "POST",
-        body: JSON.stringify(data),
+        body: JSON.stringify({ data, id }),
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${this.appKey}`,

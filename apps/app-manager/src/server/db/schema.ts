@@ -1,5 +1,7 @@
 import {
+  blob,
   index,
+  int,
   integer,
   sqliteTable,
   text,
@@ -15,7 +17,7 @@ export const apps = sqliteTable(
     secretKey: text().unique().notNull(),
     enabled: integer({ mode: "boolean" }).default(true),
   },
-  (app) => [index("secIdx").on(app.secretKey)],
+  (app) => [index("app_secIdx").on(app.secretKey)],
 );
 
 export const peers = sqliteTable(
@@ -36,9 +38,9 @@ export const peers = sqliteTable(
     }),
   },
   (peer) => [
-    index("appIdx").on(peer.appId),
-    index("authIdx").on(peer.authenticatedUserId),
-    uniqueIndex("unique").on(peer.id, peer.appId),
+    index("peer_appIdx").on(peer.appId),
+    index("peer_authIdx").on(peer.authenticatedUserId),
+    uniqueIndex("peer_unique").on(peer.id, peer.appId),
   ],
 );
 
@@ -57,15 +59,39 @@ export const peerChannelSubscriptions = sqliteTable(
         onDelete: "cascade",
       }),
     channel: text().notNull(),
+    channelFlags: int().notNull().default(0),
   },
   (peerChannelSubscription) => [
-    index("channelIdx").on(peerChannelSubscription.channel),
-    index("appIdx").on(peerChannelSubscription.appId),
-    index("peerIdx").on(peerChannelSubscription.peerId),
-    uniqueIndex("unique").on(
+    index("pcs_channelIdx").on(peerChannelSubscription.channel),
+    index("pcs_appIdx").on(peerChannelSubscription.appId),
+    index("pcs_peerIdx").on(peerChannelSubscription.peerId),
+    uniqueIndex("pcs_unique").on(
       peerChannelSubscription.appId,
       peerChannelSubscription.peerId,
       peerChannelSubscription.channel,
+    ),
+  ],
+);
+
+export const storedChannelMessages = sqliteTable(
+  "storedChannelMessages",
+  {
+    id: text().primaryKey(),
+    appId: text()
+      .notNull()
+      .references(() => apps.id, {
+        onDelete: "cascade",
+      }),
+    channel: text().notNull(),
+    channelFlags: int().notNull().default(0),
+    data: blob().notNull(),
+  },
+  (storedChannelMessage) => [
+    index("scm_appIdx").on(storedChannelMessage.appId),
+    index("scm_channelIdx").on(storedChannelMessage.channel),
+    index("scm_comboIdx").on(
+      storedChannelMessage.appId,
+      storedChannelMessage.channel,
     ),
   ],
 );

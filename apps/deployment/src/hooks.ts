@@ -1,5 +1,6 @@
 import type { Hooks } from "crossws";
 import { eq } from "drizzle-orm";
+import { v7 } from "uuid";
 
 import { ServerEndpointSchema } from "@sinkr/validators";
 
@@ -47,7 +48,7 @@ export const hooks = {
       });
       return;
     }
-    const res = await handleSource(parsed.data, peerInfo.appId);
+    const res = await handleSource(body.id, parsed.data, peerInfo.appId);
     peer.send({
       status: res.status,
       id: body.id,
@@ -84,9 +85,13 @@ export const hooks = {
       if (peerInfo && subscription.channel.startsWith("presence-")) {
         sendToPeer(peer, {
           source: "metadata",
+          id: v7(),
           data: {
             event: "member-leave",
-            channel: subscription.channel,
+            channel: {
+              name: subscription.channel,
+              flags: subscription.channelFlags,
+            },
             member: {
               id: peerInfo.authenticatedUserId ?? peerInfo.id,
               userInfo: peerInfo.userInfo,
@@ -96,9 +101,13 @@ export const hooks = {
       } else {
         sendToPeer(peer, {
           source: "metadata",
+          id: v7(),
           data: {
             event: "count",
-            channel: subscription.channel,
+            channel: {
+              name: subscription.channel,
+              flags: subscription.channelFlags,
+            },
             count: newChannelCounts.get(subscription.channel) ?? 0,
           },
         });
@@ -134,6 +143,7 @@ export const hooks = {
       });
       sendToPeer(peer, {
         source: "metadata",
+        id: v7(),
         data: {
           event: "init",
           peerId: peer.id,

@@ -8,7 +8,7 @@ import * as schema from "~/server/db/schema";
 import { auth } from "../auth";
 
 export const createTRPCContext = async (opts: { headers: Headers }) => {
-  const { env } = await getCloudflareContext();
+  const { env } = getCloudflareContext();
   const db = drizzle(env.DATABASE, { schema });
   const authObj = await auth();
   return {
