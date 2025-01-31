@@ -23,6 +23,10 @@ export const hooks = {
     }
   },
   async message(peer, message) {
+    if (message.text() === "ping") {
+      peer.send("pong");
+      return;
+    }
     const db = getDB();
     const peerInfo = await db.query.peers.findFirst({
       where: (p, ops) => ops.eq(p.id, peer.id),
