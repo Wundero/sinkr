@@ -1,6 +1,6 @@
 {
   "name": "@sinkr/react",
-  "version": "0.3.6",
+  "version": "0.4.0",
   "type": "module",
   "main": "src/index.ts",
   "exports": {
@@ -17,15 +17,15 @@
     "@sinkr/eslint-config": "workspace:*",
     "@sinkr/prettier-config": "workspace:*",
     "@sinkr/tsconfig": "workspace:*",
-    "@types/react": "^19.0.1",
-    "@types/react-dom": "^19.0.2",
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.3",
     "eslint": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:"
   },
   "prettier": "@sinkr/prettier-config",
   "dependencies": {
-    "@sinkr/core": "npm:@jsr/sinkr__core@0.5.1",
+    "@sinkr/core": "npm:@jsr/sinkr__core@0.8.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   }

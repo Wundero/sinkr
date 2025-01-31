@@ -2,16 +2,11 @@
 
 import React, { useEffect } from "react";
 
-import type {
-  Channel,
-  EventMap,
-  PresenceChannel,
-  Sinker,
-} from "@sinkr/core/client";
+import type { EventMap, SinkrChannel, SinkrSink } from "@sinkr/core/client";
 import { sink } from "@sinkr/core/client";
 
 interface SinkrContext {
-  sink: Sinker;
+  sink: SinkrSink;
 }
 
 const SinkrContext = React.createContext<SinkrContext | null>(null);
@@ -38,7 +33,7 @@ export function SinkrProvider({
   appId,
   children,
 }: SinkrProviderProps): React.JSX.Element {
-  const [sinkState, setSink] = React.useState<Sinker | null>(null);
+  const [sinkState, setSink] = React.useState<SinkrSink | null>(null);
 
   useEffect(() => {
     const sk = sink({ url, appId });
@@ -63,7 +58,7 @@ export function SinkrProvider({
 /**
  * Get an event listener for all events.
  */
-export function useSinkr(): Sinker | null {
+export function useSinkr(): SinkrSink | null {
   const context = React.useContext(SinkrContext);
   if (!context) {
     return null;
@@ -98,13 +93,14 @@ export function useSinkrEvent<
  * Get an event listener for a specific channel.
  * @param channel The channel name.
  */
-export function useSinkrChannel(channel: string): Channel | null;
 export function useSinkrChannel(
-  channel: `presence-${string}`,
-): PresenceChannel | null;
-export function useSinkrChannel(
-  channel: string,
-): Channel | PresenceChannel | null {
+  channel:
+    | string
+    | {
+        name: string;
+        flags: number;
+      },
+): SinkrChannel | null {
   const sinkr = useSinkr();
   return sinkr?.channel(channel) ?? null;
 }
