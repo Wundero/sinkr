@@ -72,7 +72,7 @@ function proxyRemoveEmit<T extends Emittery<any>>(emitter: T) {
 class BrowserSinker extends Emittery<EventMapWithDefaults> {
   private ws: WebSocket | null = null;
 
-  private channelCache = new Map<string, WeakRef<Channel | PresenceChannel>>();
+  private channelCache = new Map<string, WeakRef<SinkrChannel | SinkrPresenceChannel>>();
 
   private keyMap = new Map<string, CryptoKey>();
 
@@ -92,8 +92,8 @@ class BrowserSinker extends Emittery<EventMapWithDefaults> {
    * Get a sinkr channel by name. If a presence channel is specified, alternative types and messages will be available.
    * @param channel The channel to listen to. Events will only fire if the current client is subscribed to the channel.
    */
-  channel(channel: `presence-${string}`): PresenceChannel;
-  channel(channel: string): Channel;
+  channel(channel: `presence-${string}`): SinkrPresenceChannel;
+  channel(channel: string): SinkrChannel;
   channel(channel: string) {
     const cached = this.channelCache.get(channel)?.deref();
     if (cached) {
@@ -344,20 +344,20 @@ type PresenceNoEmit = Omit<PresenceSinker, "emit" | "emitSerial">;
 /**
  * Global Sinkr client for the browser. Fires all events received.
  */
-export type Sinker = Prettify<Omit<BrowserSinker, "emit" | "emitSerial">>;
+export type SinkrSink = Prettify<Omit<BrowserSinker, "emit" | "emitSerial">>;
 /**
  * A Sinkr channel for the browser. Fires all events received for the specified channel.
  */
-export type Channel = Prettify<ChannelNoEmit>;
+export type SinkrChannel = Prettify<ChannelNoEmit>;
 /**
  * A Sinkr presence channel for the browser. Fires all events received for the specified presence channel.
  */
-export type PresenceChannel = Prettify<PresenceNoEmit>;
+export type SinkrPresenceChannel = Prettify<PresenceNoEmit>;
 
 /**
  * Sinkr initialization options.
  */
-export interface SinkOptions {
+export interface SinkrOptions {
   /**
    * The Sinkr url to connect to.
    */
@@ -391,7 +391,7 @@ function withEnvFallback(
  * @param options The connection options to use.
  * @returns The connected Sinkr client.
  */
-export function sink(options: SinkOptions | undefined = {}): Sinker {
+export function sink(options: SinkrOptions | undefined = {}): SinkrSink {
   const url = withEnvFallback(
     options.url,
     "SINKR_URL",

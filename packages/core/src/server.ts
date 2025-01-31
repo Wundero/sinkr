@@ -156,7 +156,7 @@ async function getMessageContent(
   }
 }
 
-class Sourcerer {
+class SinkrSource {
   private url: URL;
   private wsUrl: URL;
 
@@ -471,8 +471,6 @@ class Sourcerer {
   }
 }
 
-export type SinkrSource = Sourcerer;
-
 function withEnvFallback(
   value: string | undefined,
   ...keys: string[]
@@ -527,5 +525,5 @@ export function source({
   if (!appKey) {
     throw new Error("Unable to start Sourcerer without an app key!");
   }
-  return new Sourcerer(url, appKey, appId);
+  return new SinkrSource(url, appKey, appId);
 }
