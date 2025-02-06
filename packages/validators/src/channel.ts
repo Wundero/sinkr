@@ -131,4 +131,12 @@ export const PresenceChannelTypeSchema = z.object({
     .refine((num) => num & ChannelFlags.IS_PRESENCE),
 });
 
+export const StoredMessageChannelTypeSchema = z.object({
+  name: z.string(),
+  flags: z
+    .number()
+    .int()
+    .refine((num) => num & ChannelFlags.SHOULD_STORE_MESSAGES),
+});
+
 export const SoftChannelTypeSchema = z.union([z.string(), ChannelTypeSchema]);

@@ -1,6 +1,9 @@
 import { z } from "zod";
 
-import { SoftChannelTypeSchema } from "./channel";
+import {
+  SoftChannelTypeSchema,
+  StoredMessageChannelTypeSchema,
+} from "./channel";
 import { MessageTypeSchema } from "./message";
 
 export const AuthenticateRouteSchema = z.object({
@@ -29,6 +32,12 @@ export const ChannelMessageSchema = z.object({
   message: MessageTypeSchema,
 });
 
+export const DeleteStoredMessagesSchema = z.object({
+  route: z.literal("deleteMessages"),
+  channel: StoredMessageChannelTypeSchema,
+  messageIds: z.array(z.string()).optional(),
+});
+
 export const DirectMessageSchema = z.object({
   route: z.literal("direct"),
   recipientId: z.string(),
@@ -49,4 +58,5 @@ export const ServerEndpointSchema = z.discriminatedUnion("route", [
   ChannelMessageSchema,
   DirectMessageSchema,
   BroadcastMessageSchema,
+  DeleteStoredMessagesSchema,
 ]);

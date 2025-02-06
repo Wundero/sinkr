@@ -1,7 +1,7 @@
 import type { Peer } from "crossws";
 import type { z } from "zod";
 import crossws from "crossws/adapters/cloudflare-durable";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 import type {
   ClientReceiveSchema,
@@ -79,6 +79,32 @@ export async function handleSource(
         .update(peers)
         .set({ userInfo: data.userInfo, authenticatedUserId: data.id })
         .where(eq(peers.id, peer.id));
+      return new Response("OK", { status: 200 });
+    }
+    case "deleteMessages": {
+      const ch = toChannel(data.channel);
+      if (data.messageIds?.length) {
+        await db
+          .delete(storedChannelMessages)
+          .where(
+            and(
+              eq(storedChannelMessages.channel, ch.name),
+              eq(storedChannelMessages.appId, appId),
+              eq(storedChannelMessages.channelFlags, ch.flags),
+              inArray(storedChannelMessages.id, data.messageIds),
+            ),
+          );
+      } else {
+        await db
+          .delete(storedChannelMessages)
+          .where(
+            and(
+              eq(storedChannelMessages.channel, ch.name),
+              eq(storedChannelMessages.appId, appId),
+              eq(storedChannelMessages.channelFlags, ch.flags),
+            ),
+          );
+      }
       return new Response("OK", { status: 200 });
     }
     case "broadcast": {
