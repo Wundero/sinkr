@@ -162,6 +162,25 @@ class SinkrSource:
         }
         return await self.__fetch(body)
 
+    async def delete_channel_messages(
+        self, channel: str, message_ids: Optional[list[str]] = None
+    ):
+        """
+        Delete stored messages for a channel.
+
+        :param channel: The channel to delete messages from.
+        :param message_ids: The ids of the messages to delete. None or an empty array will delete **all** messages.
+
+        :return: The HTTP status code from Sinkr.
+        """
+        body = {
+            "route": "deleteMessages",
+            "channel": channel,
+        }
+        if message_ids:
+            body["messageIds"] = message_ids
+        return await self.__fetch(body)
+
     async def subscribe_to_channel(self, user_id: str, channel: str):
         """
         Subscribe a user to a channel. If the channel is a private or presence channel, the user must be authenticated.
