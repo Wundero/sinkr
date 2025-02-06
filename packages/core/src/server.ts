@@ -6,6 +6,7 @@ import type {
   MessageTypeSchema,
   ServerEndpointSchema,
 } from "@sinkr/validators";
+import { ChannelFlags, toChannel } from "@sinkr/validators";
 
 import type { RealEventMap } from "./event-fallback";
 import type { EncryptionInput, UserInfo } from "./types";
@@ -293,6 +294,32 @@ class SinkrSource {
       id: userInfo.id,
       peerId,
       userInfo: userInfo.userInfo,
+    });
+  }
+
+  /**
+   * Delete stored messages for a channel.
+   * @param channel The channel to delete messages from.
+   * @param messageIds The ids of the messages to delete. Undefined or an empty array will delete **all** messages.
+   * @returns The HTTP status code Sinkr returned.
+   */
+  async deleteChannelMessages(
+    channel:
+      | string
+      | {
+          name: string;
+          flags: number;
+        },
+    messageIds?: string[],
+  ): Promise<number> {
+    const channelData = toChannel(channel);
+    if (!(channelData.flags & ChannelFlags.SHOULD_STORE_MESSAGES)) {
+      return 400; // Bad Request
+    }
+    return await this.sendData({
+      route: "deleteMessages",
+      channel: channelData,
+      messageIds,
     });
   }
 

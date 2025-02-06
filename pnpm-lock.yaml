@@ -248,8 +248,8 @@ importers:
         specifier: ^1.1.0
         version: 1.1.0
       '@sinkr/validators':
-        specifier: npm:@jsr/sinkr__validators@0.4.0
-        version: '@jsr/sinkr__validators@0.4.0'
+        specifier: npm:@jsr/sinkr__validators@0.4.1
+        version: '@jsr/sinkr__validators@0.4.1'
       emittery:
         specifier: ^1.1.0
         version: 1.1.0
@@ -1772,6 +1772,9 @@ packages:
 
   '@jsr/sinkr__validators@0.4.0':
     resolution: {integrity: sha512-MwAjzL1at2/0WRGVaN9DrnULNakbCfrj3qMsXlFP1FBHy3DV8ReMhIabjOZQ9d6IXLfz/Pw2uSrckfEOZXLNwQ==, tarball: https://npm.jsr.io/~/11/@jsr/sinkr__validators/0.4.0.tgz}
+
+  '@jsr/sinkr__validators@0.4.1':
+    resolution: {integrity: sha512-SGhMXcqbnn5cxQw4YFKvconctvBxFozLrqg196NfaixjNuas/flVZmSzDfcCcUJeKOA8CGTdcWX8ZdnVopYV6w==, tarball: https://npm.jsr.io/~/11/@jsr/sinkr__validators/0.4.1.tgz}
 
   '@miniflare/core@2.14.4':
     resolution: {integrity: sha512-FMmZcC1f54YpF4pDWPtdQPIO8NXfgUxCoR9uyrhxKJdZu7M6n8QKopPVNuaxR40jcsdxb7yKoQoFWnHfzJD9GQ==}
@@ -7422,6 +7425,10 @@ snapshots:
       zod: 3.24.1
 
   '@jsr/sinkr__validators@0.4.0':
+    dependencies:
+      zod: 3.24.1
+
+  '@jsr/sinkr__validators@0.4.1':
     dependencies:
       zod: 3.24.1
 
