@@ -7,14 +7,9 @@ import type {
   ClientReceiveSchema,
   ServerEndpointSchema,
 } from "@sinkr/validators";
-import {
-  channelRequiresAuthentication,
-  isPresenceChannel,
-  shouldChannelStoreMessages,
-  toChannel,
-} from "@sinkr/validators";
 
 import {
+  channels,
   peerChannelSubscriptions,
   peers,
   storedChannelMessages,
@@ -33,18 +28,9 @@ export const ws = crossws({
 export function getPeers() {
   const firstPeer = ws.peers.values().next().value;
   if (!firstPeer) {
-    console.log(
-      "peer get: none",
-      [...ws.peers].map((p) => p.id),
-    );
     return new Set<Peer>();
   }
   const all = firstPeer.peers;
-  console.log(
-    "peer get",
-    [...all].map((p) => p.id),
-    [...ws.peers].map((p) => p.id),
-  );
   return all;
 }
 
@@ -81,16 +67,69 @@ export async function handleSource(
         .where(eq(peers.id, peer.id));
       return new Response("OK", { status: 200 });
     }
+    case "createChannel": {
+      const existing = await db.query.channels.findFirst({
+        where: (c, ops) =>
+          ops.and(ops.eq(c.appId, appId), ops.eq(c.name, data.name)),
+      });
+      if (existing) {
+        const [updated] = await db
+          .update(channels)
+          .set({
+            auth: data.authMode,
+            store: data.storeMessages,
+          })
+          .where(eq(channels.id, existing.id))
+          .returning();
+        if (!updated) {
+          return new Response("Internal server error", {
+            status: 500,
+          });
+        }
+        return new Response(updated.id, {
+          status: 200,
+        });
+      } else {
+        const [inserted] = await db
+          .insert(channels)
+          .values({
+            appId,
+            name: data.name,
+            auth: data.authMode,
+            store: data.storeMessages,
+          })
+          .returning();
+        if (!inserted) {
+          return new Response("Internal server error", {
+            status: 500,
+          });
+        }
+        return new Response(inserted.id, {
+          status: 200,
+        });
+      }
+    }
+    case "deleteChannel": {
+      const channel = await db.query.channels.findFirst({
+        where: (c, ops) =>
+          ops.and(ops.eq(c.appId, appId), ops.eq(c.id, data.channelId)),
+      });
+      if (!channel) {
+        return new Response("Not found", { status: 404 });
+      }
+      await db
+        .delete(channels)
+        .where(and(eq(channels.id, data.channelId), eq(channels.appId, appId)));
+      return new Response("OK", { status: 200 });
+    }
     case "deleteMessages": {
-      const ch = toChannel(data.channel);
       if (data.messageIds?.length) {
         await db
           .delete(storedChannelMessages)
           .where(
             and(
-              eq(storedChannelMessages.channel, ch.name),
+              eq(storedChannelMessages.channelId, data.channelId),
               eq(storedChannelMessages.appId, appId),
-              eq(storedChannelMessages.channelFlags, ch.flags),
               inArray(storedChannelMessages.id, data.messageIds),
             ),
           );
@@ -99,9 +138,8 @@ export async function handleSource(
           .delete(storedChannelMessages)
           .where(
             and(
-              eq(storedChannelMessages.channel, ch.name),
+              eq(storedChannelMessages.channelId, data.channelId),
               eq(storedChannelMessages.appId, appId),
-              eq(storedChannelMessages.channelFlags, ch.flags),
             ),
           );
       }
@@ -132,21 +170,22 @@ export async function handleSource(
       return new Response("OK", { status: 200 });
     }
     case "channel": {
-      const ch = toChannel(data.channel);
+      const ch = await db.query.channels.findFirst({
+        where: (c, ops) =>
+          ops.and(ops.eq(c.id, data.channelId), ops.eq(c.appId, appId)),
+      });
+      if (!ch) {
+        return new Response("Not found", { status: 404 });
+      }
       const subscriptions = await db.query.peerChannelSubscriptions.findMany({
         where: (s, ops) =>
-          ops.and(
-            ops.eq(s.appId, appId),
-            ops.eq(s.channel, ch.name),
-            ops.eq(s.channelFlags, ch.flags),
-          ),
+          ops.and(ops.eq(s.appId, appId), ops.eq(s.channelId, data.channelId)),
       });
-      if (shouldChannelStoreMessages(ch)) {
+      if (ch.store) {
         await db.insert(storedChannelMessages).values({
           id: messageId,
           appId,
-          channel: ch.name,
-          channelFlags: ch.flags,
+          channelId: ch.id,
           data,
         });
       }
@@ -161,7 +200,7 @@ export async function handleSource(
               event: data.event,
               from: {
                 source: "channel",
-                channel: ch,
+                channelId: ch.id,
               },
               message: data.message,
             },
@@ -202,7 +241,13 @@ export async function handleSource(
       return new Response("OK", { status: 200 });
     }
     case "subscribe": {
-      const ch = toChannel(data.channel);
+      const ch = await db.query.channels.findFirst({
+        where: (c, ops) =>
+          ops.and(ops.eq(c.appId, appId), ops.eq(c.id, data.channelId)),
+      });
+      if (!ch) {
+        return new Response("Not found", { status: 404 });
+      }
       const dbPeer = await db.query.peers.findFirst({
         where: (p, ops) =>
           ops.and(
@@ -216,7 +261,7 @@ export async function handleSource(
       if (!dbPeer) {
         return new Response("Not found", { status: 404 });
       }
-      if (channelRequiresAuthentication(ch)) {
+      if (ch.auth === "public") {
         if (!dbPeer.authenticatedUserId) {
           return new Response("Unauthorized", { status: 401 });
         }
@@ -231,72 +276,45 @@ export async function handleSource(
         .where(
           and(
             eq(peers.appId, appId),
-            eq(peerChannelSubscriptions.channel, ch.name),
-            eq(peerChannelSubscriptions.channelFlags, ch.flags),
+            eq(peerChannelSubscriptions.channelId, ch.id),
           ),
         );
       await db.insert(peerChannelSubscriptions).values({
         appId,
         peerId: dbPeer.id,
-        channel: ch.name,
-        channelFlags: ch.flags,
+        channelId: ch.id,
       });
-      const isPresence = isPresenceChannel(ch);
       const peerMap = getPeerMap();
       const mainPeer = peerMap.get(dbPeer.id);
       if (mainPeer) {
-        if (isPresence) {
-          sendToPeer(mainPeer, {
-            source: "metadata",
-            id: messageId,
-            data: {
-              event: "join-presence-channel",
-              channel: ch,
-              members: existingSubs.map((s) => ({
-                id: s.peer.authenticatedUserId ?? s.peer.id,
-                userInfo: s.peer.userInfo,
-              })),
-            },
-          });
-        } else {
-          sendToPeer(mainPeer, {
-            source: "metadata",
-            id: messageId,
-            data: {
-              event: "count",
-              channel: ch,
-              count: existingSubs.length + 1,
-            },
-          });
-        }
+        sendToPeer(mainPeer, {
+          source: "metadata",
+          id: messageId,
+          data: {
+            event: "join-channel",
+            channelId: ch.id,
+            members: existingSubs.map((s) => ({
+              id: s.peer.authenticatedUserId ?? s.peer.id,
+              userInfo: ch.auth === "presence" ? s.peer.userInfo : undefined,
+            })),
+          },
+        });
       }
       existingSubs.forEach((sub) => {
         const peer = peerMap.get(sub.peer.id);
         if (peer) {
-          if (isPresence) {
-            sendToPeer(peer, {
-              source: "metadata",
-              id: messageId,
-              data: {
-                event: "member-join",
-                channel: ch,
-                member: {
-                  id: dbPeer.authenticatedUserId ?? dbPeer.id,
-                  userInfo: dbPeer.userInfo,
-                },
+          sendToPeer(peer, {
+            source: "metadata",
+            id: messageId,
+            data: {
+              event: "member-join",
+              channelId: ch.id,
+              member: {
+                id: dbPeer.authenticatedUserId ?? dbPeer.id,
+                userInfo: ch.auth === "presence" ? dbPeer.userInfo : undefined,
               },
-            });
-          } else {
-            sendToPeer(peer, {
-              source: "metadata",
-              id: messageId,
-              data: {
-                event: "count",
-                channel: ch,
-                count: existingSubs.length + 1,
-              },
-            });
-          }
+            },
+          });
         }
       });
       return new Response("OK", { status: 200 });
@@ -315,14 +333,19 @@ export async function handleSource(
       if (!dbPeer) {
         return new Response("Not found", { status: 404 });
       }
-      const ch = toChannel(data.channel);
+      const ch = await db.query.channels.findFirst({
+        where: (c, ops) =>
+          ops.and(ops.eq(c.appId, appId), ops.eq(c.id, data.channelId)),
+      });
+      if (!ch) {
+        return new Response("Not found", { status: 404 });
+      }
       const isInChannel = await db.query.peerChannelSubscriptions.findFirst({
         where: (s, ops) =>
           ops.and(
             ops.eq(s.appId, appId),
             ops.eq(s.peerId, dbPeer.id),
-            ops.eq(s.channel, ch.name),
-            ops.eq(s.channelFlags, ch.flags),
+            ops.eq(s.channelId, ch.id),
           ),
       });
       if (!isInChannel) {
@@ -341,18 +364,16 @@ export async function handleSource(
         .where(
           and(
             eq(peers.appId, appId),
-            eq(peerChannelSubscriptions.channel, ch.name),
-            eq(peerChannelSubscriptions.channelFlags, ch.flags),
+            eq(peerChannelSubscriptions.channelId, ch.id),
           ),
         );
       const peerMap = getPeerMap();
       const mainPeer = peerMap.get(dbPeer.id);
-      const isPresence = isPresenceChannel(ch);
       if (mainPeer) {
         sendToPeer(mainPeer, {
           data: {
             event: "leave-channel",
-            channel: ch,
+            channelId: ch.id,
           },
           id: messageId,
           source: "metadata",
@@ -361,30 +382,18 @@ export async function handleSource(
       remainingSubs.forEach((sub) => {
         const peer = peerMap.get(sub.peer.id);
         if (peer) {
-          if (isPresence) {
-            sendToPeer(peer, {
-              source: "metadata",
-              id: messageId,
-              data: {
-                event: "member-leave",
-                channel: ch,
-                member: {
-                  id: dbPeer.authenticatedUserId ?? dbPeer.id,
-                  userInfo: dbPeer.userInfo,
-                },
+          sendToPeer(peer, {
+            source: "metadata",
+            id: messageId,
+            data: {
+              event: "member-leave",
+              channelId: ch.id,
+              member: {
+                id: dbPeer.authenticatedUserId ?? dbPeer.id,
+                userInfo: ch.auth === "presence" ? dbPeer.userInfo : undefined,
               },
-            });
-          } else {
-            sendToPeer(peer, {
-              source: "metadata",
-              id: messageId,
-              data: {
-                event: "count",
-                channel: ch,
-                count: remainingSubs.length,
-              },
-            });
-          }
+            },
+          });
         }
       });
       return new Response("OK", { status: 200 });

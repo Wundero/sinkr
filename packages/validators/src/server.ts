@@ -1,9 +1,5 @@
 import { z } from "zod";
 
-import {
-  SoftChannelTypeSchema,
-  StoredMessageChannelTypeSchema,
-} from "./channel";
 import { MessageTypeSchema } from "./message";
 
 export const AuthenticateRouteSchema = z.object({
@@ -13,29 +9,41 @@ export const AuthenticateRouteSchema = z.object({
   userInfo: z.unknown(),
 });
 
+export const CreateChannelRouteSchema = z.object({
+  route: z.literal("createChannel"),
+  name: z.string(),
+  authMode: z.enum(["public", "private", "presence"]),
+  storeMessages: z.boolean().default(false),
+});
+
+export const DeleteChannelRouteSchema = z.object({
+  route: z.literal("deleteChannel"),
+  channelId: z.string(),
+});
+
 export const SubscribeRouteSchema = z.object({
   route: z.literal("subscribe"),
   subscriberId: z.string(),
-  channel: SoftChannelTypeSchema,
+  channelId: z.string(),
 });
 
 export const UnsubscribeRouteSchema = z.object({
   route: z.literal("unsubscribe"),
   subscriberId: z.string(),
-  channel: SoftChannelTypeSchema,
-});
-
-export const ChannelMessageSchema = z.object({
-  route: z.literal("channel"),
-  channel: SoftChannelTypeSchema,
-  event: z.string(),
-  message: MessageTypeSchema,
+  channelId: z.string(),
 });
 
 export const DeleteStoredMessagesSchema = z.object({
   route: z.literal("deleteMessages"),
-  channel: StoredMessageChannelTypeSchema,
+  channelId: z.string(),
   messageIds: z.array(z.string()).optional(),
+});
+
+export const ChannelMessageSchema = z.object({
+  route: z.literal("channel"),
+  channelId: z.string(),
+  event: z.string(),
+  message: MessageTypeSchema,
 });
 
 export const DirectMessageSchema = z.object({
@@ -59,4 +67,6 @@ export const ServerEndpointSchema = z.discriminatedUnion("route", [
   DirectMessageSchema,
   BroadcastMessageSchema,
   DeleteStoredMessagesSchema,
+  CreateChannelRouteSchema,
+  DeleteChannelRouteSchema,
 ]);

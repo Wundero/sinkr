@@ -67,51 +67,34 @@ export const hooks = {
     const channelPeers = await db.query.peerChannelSubscriptions.findMany({
       where: (pcs, ops) =>
         ops.inArray(
-          pcs.channel,
-          connectedChannels.map((c) => c.channel),
+          pcs.channelId,
+          connectedChannels.map((c) => c.channelId),
         ),
+      with: {
+        channel: true,
+      },
     });
-    const newChannelCounts = new Map<string, number>();
-    for (const subscription of channelPeers) {
-      const count = newChannelCounts.get(subscription.channel) ?? 0;
-      newChannelCounts.set(subscription.channel, count + 1);
-    }
     const peerMap = getPeerMap();
     for (const subscription of channelPeers) {
       const peer = peerMap.get(subscription.peerId);
       if (!peer) {
         continue;
       }
-      if (peerInfo && subscription.channel.startsWith("presence-")) {
-        sendToPeer(peer, {
-          source: "metadata",
-          id: v7(),
-          data: {
-            event: "member-leave",
-            channel: {
-              name: subscription.channel,
-              flags: subscription.channelFlags,
-            },
-            member: {
-              id: peerInfo.authenticatedUserId ?? peerInfo.id,
-              userInfo: peerInfo.userInfo,
-            },
+      sendToPeer(peer, {
+        source: "metadata",
+        id: v7(),
+        data: {
+          event: "member-leave",
+          channelId: subscription.channelId,
+          member: {
+            id: subscription.peerId,
+            userInfo:
+              subscription.channel.auth === "presence"
+                ? peerInfo?.userInfo
+                : undefined,
           },
-        });
-      } else {
-        sendToPeer(peer, {
-          source: "metadata",
-          id: v7(),
-          data: {
-            event: "count",
-            channel: {
-              name: subscription.channel,
-              flags: subscription.channelFlags,
-            },
-            count: newChannelCounts.get(subscription.channel) ?? 0,
-          },
-        });
-      }
+        },
+      });
     }
   },
   async open(peer) {
