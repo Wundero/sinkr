@@ -3,22 +3,19 @@ import Emittery from "emittery";
 
 import type {
   ChannelMemberSchema,
-  ClientCountChannelSchema,
   ClientInitSchema,
-  ClientJoinPresenceChannelSchema,
+  ClientJoinChannelSchema,
   ClientLeaveChannelSchema,
-  ClientLeavePresenceChannelSchema,
-  ClientNewMemberSchema,
   ClientReceiveMessageSchema,
+  MemberJoinChannelSchema,
+  MemberLeaveChannelSchema,
 } from "@sinkr/validators";
-import { ClientReceiveSchema, toChannel } from "@sinkr/validators";
+import { ClientReceiveSchema } from "@sinkr/validators";
 
 import type { RealEventMap } from "./event-fallback";
-import type { EncryptionInput, UserInfo } from "./types";
-import { decrypt, importUnknownJWK } from "./crypto";
+import type { UserInfo } from "./types";
 import {
   connectSymbol,
-  countEventSymbol,
   disconnectSymbol,
   initEventSymbol,
   joinEventSymbol,
@@ -33,11 +30,10 @@ type Prettify<T> = {
 
 interface DefaultEvents {
   [initEventSymbol]: z.infer<typeof ClientInitSchema>;
-  [countEventSymbol]: z.infer<typeof ClientCountChannelSchema>;
-  [joinEventSymbol]: z.infer<typeof ClientJoinPresenceChannelSchema>;
+  [joinEventSymbol]: [z.infer<typeof ClientJoinChannelSchema>, SinkrChannel];
   [leaveEventSymbol]: z.infer<typeof ClientLeaveChannelSchema>;
-  [memberJoinEventSymbol]: z.infer<typeof ClientNewMemberSchema>;
-  [memberLeaveEventSymbol]: z.infer<typeof ClientLeavePresenceChannelSchema>;
+  [memberJoinEventSymbol]: z.infer<typeof MemberJoinChannelSchema>;
+  [memberLeaveEventSymbol]: z.infer<typeof MemberLeaveChannelSchema>;
   [connectSymbol]: undefined;
   [disconnectSymbol]: undefined;
 }
@@ -69,57 +65,71 @@ function proxyRemoveEmit<T extends Emittery<any>>(emitter: T) {
   });
 }
 
-type SoftChannel =
-  | string
-  | {
-      name: string;
-      flags: number;
-    };
-
-function chash(channel: SoftChannel) {
-  const ch = toChannel(channel);
-  return `${ch.flags}.${ch.name}`;
-}
-
-function ceq(a: SoftChannel, b: SoftChannel) {
-  return chash(a) === chash(b);
-}
+type ChannelMetadata = z.infer<typeof ClientJoinChannelSchema>;
 
 class BrowserSinker extends Emittery<EventMapWithDefaults> {
   private ws: WebSocket | null = null;
 
   private channelCache = new Map<string, WeakRef<SinkrChannel>>();
+  private joinedChannels = new Map<string, WeakRef<ChannelMetadata>>();
+  private pingInterval: NodeJS.Timeout | null = null;
 
-  private keyMap = new Map<string, CryptoKey>();
-
-  constructor(private url: string) {
+  constructor(
+    private url: string,
+    private pingFreq = 0,
+  ) {
     super();
   }
 
   /**
-   * Imports a decryption key for the client to decrypt messages.
+   * Get a sinkr channel by id.
+   * @param channelId The channel to listen to. Events will only fire if the current client is subscribed to the channel.
+   * @returns The channel object.
    */
-  async addDecryptionKey(key: EncryptionInput) {
-    const imported = await importUnknownJWK(key.key);
-    this.keyMap.set(key.keyId, imported);
-  }
-
-  /**
-   * Get a sinkr channel by name. If a presence channel is specified, alternative types and messages will be available.
-   * @param channel The channel to listen to. Events will only fire if the current client is subscribed to the channel.
-   */
-  channel(channel: SoftChannel, flags?: number): SinkrChannel {
-    const ch = toChannel(channel);
-    ch.flags |= flags ?? 0;
-    const chas = chash(channel);
-    const cached = this.channelCache.get(chas)?.deref();
+  channel(channelId: string): SinkrChannel {
+    const cached = this.channelCache.get(channelId)?.deref();
     if (cached) {
       return cached;
     }
-    const newChannel = proxyRemoveEmit(new ChannelSinker(this, channel));
+    const newChannel = proxyRemoveEmit(
+      new ChannelSinker(
+        this,
+        channelId,
+        this.joinedChannels.get(channelId)?.deref(),
+      ),
+    );
     const ref = new WeakRef(newChannel);
-    this.channelCache.set(chas, ref);
+    this.channelCache.set(channelId, ref);
     return newChannel;
+  }
+
+  /**
+   * Request stored messages to be transmitted to this client.
+   * @param channel The channel the messages are stored on.
+   * @param messageIds The message id or ids to request.
+   */
+  requestStoredMessages(
+    channel: string | SinkrChannel,
+    messageIds: string | string[],
+  ) {
+    const channelId = typeof channel === "string" ? channel : channel.channelId;
+    if (Array.isArray(messageIds)) {
+      this.ws?.send(
+        JSON.stringify({
+          event: "request-stored-messages",
+          channelId,
+          messageIds,
+        }),
+      );
+    } else {
+      this.ws?.send(
+        JSON.stringify({
+          event: "request-stored-messages",
+          channelId,
+          messageIds: [messageIds],
+        }),
+      );
+    }
   }
 
   /**
@@ -128,6 +138,10 @@ class BrowserSinker extends Emittery<EventMapWithDefaults> {
   disconnect() {
     this.ws?.close();
     this.clearListeners();
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
+    }
   }
 
   /**
@@ -159,11 +173,20 @@ class BrowserSinker extends Emittery<EventMapWithDefaults> {
           case "init":
             void this.emit(initEventSymbol, data.data);
             break;
-          case "count":
-            void this.emit(countEventSymbol, data.data);
-            break;
-          case "join-presence-channel":
-            void this.emit(joinEventSymbol, data.data);
+          case "join-channel":
+            {
+              this.joinedChannels.set(
+                data.data.channelId,
+                new WeakRef(data.data),
+              );
+              const channel = new ChannelSinker(
+                this,
+                data.data.channelId,
+                data.data,
+              );
+              this.channelCache.set(channel.channelId, new WeakRef(channel));
+              void this.emit(joinEventSymbol, [data.data, channel]);
+            }
             break;
           case "leave-channel":
             void this.emit(leaveEventSymbol, data.data);
@@ -183,79 +206,65 @@ class BrowserSinker extends Emittery<EventMapWithDefaults> {
       void this.emit(disconnectSymbol);
       this.ws = null;
     });
+    if (this.pingFreq > 0) {
+      this.pingInterval = setInterval(() => {
+        this.ws?.send("ping");
+      }, this.pingFreq);
+    }
   }
 
   private async emitMessage<T>(
     input: z.infer<typeof ClientReceiveMessageSchema>,
   ) {
-    if (
-      input.message.type === "encrypted" ||
-      input.message.type === "encrypted-chunk"
-    ) {
-      const key = this.keyMap.get(input.message.keyId);
-      if (!key) {
-        return;
-      }
-      try {
-        const msg = await decrypt(input.message.ciphertext, key);
-        const msgDecoded = new TextDecoder().decode(msg);
-        const msgTransform = {
-          message: JSON.parse(msgDecoded) as T,
-          index: "index" in input.message ? input.message.index : undefined,
-        };
-        await this.emit(input.event, {
-          ...input,
-          message: msgTransform,
-        });
-      } catch (e) {
-        console.error(e);
-        return;
-      }
-    } else {
-      const msgTransform = {
-        message: input.message.message as T,
-        index: "index" in input.message ? input.message.index : undefined,
-      };
-      await this.emit(input.event, {
-        ...input,
-        message: msgTransform,
-      });
-    }
+    const msgTransform = {
+      message: input.message.message as T,
+      index: "index" in input.message ? input.message.index : undefined,
+    };
+    await this.emit(input.event, {
+      ...input,
+      message: msgTransform,
+    });
   }
 }
 /**
  * A member of a presence channel.
  */
 export type PresenceMember = Prettify<
-  Omit<z.infer<typeof ChannelMemberSchema>, "userInfo"> & { userInfo: UserInfo }
+  Omit<z.infer<typeof ChannelMemberSchema>, "userInfo"> & {
+    userInfo?: UserInfo;
+  }
 >;
-
-interface DefaultChannelEventMap {
-  [countEventSymbol]: { count: number };
-}
 
 interface DefaultPresenceChannelEventMap {
   [joinEventSymbol]: PresenceMember[];
   [memberJoinEventSymbol]: PresenceMember;
   [memberLeaveEventSymbol]: PresenceMember;
+  [leaveEventSymbol]: undefined;
 }
-type ChannelEventMap = Prettify<
-  DefaultChannelEventMap & RealEventMap & DefaultPresenceChannelEventMap
->;
+
+type ChannelEventMap = Prettify<RealEventMap & DefaultPresenceChannelEventMap>;
+
+interface ExistingMessage {
+  date: Date;
+  id: string;
+}
 
 class ChannelSinker extends Emittery<ChannelEventMap> {
-  private _count = 0;
   private _members: PresenceMember[] = [];
-  readonly channel: {
-    name: string;
-    flags: number;
-  };
+  private _joined: boolean;
 
   /**
    * The current count of connected clients to the channel.
    */
   get count(): number {
-    return this._count + this._members.length;
+    return this._members.length;
+  }
+
+  /**
+   * The existing message ids and dates from prior to joining the channel
+   */
+  get existingMessages(): ExistingMessage[] {
+    return this.channelMeta?.channelStoredMessages ?? [];
   }
 
   /**
@@ -263,63 +272,79 @@ class ChannelSinker extends Emittery<ChannelEventMap> {
    *  This is empty if the channel doesn't support presence.
    */
   get members(): PresenceMember[] {
-    return [...this._members];
+    return this._members.slice();
+  }
+
+  /**
+   * The name of this channel. If the channel has not yet been joined, this returns the channel's ID.
+   */
+  get name() {
+    return this.channelMeta?.channelName ?? this.channelId;
+  }
+
+  /**
+   * Whether the channel is active.
+   */
+  get active() {
+    return this._joined;
   }
 
   constructor(
     private root: BrowserSinker,
-    channel:
-      | string
-      | {
-          name: string;
-          flags: number;
-        },
+    readonly channelId: string,
+    private channelMeta?: ChannelMetadata,
   ) {
     super();
-    this.channel = toChannel(channel);
-    const unsubCount = this.root.on(countEventSymbol, (data) => {
-      if (ceq(this.channel, data.channel)) {
-        this._count = data.count;
-        void this.emit(countEventSymbol, { count: data.count });
-      }
-    });
-    const unsubEvent = this.root.onAny((eventName, data) => {
+    this._joined = Boolean(this.channelMeta);
+    this._members = (channelMeta?.members ?? []) as PresenceMember[];
+    this.root.onAny((eventName, data) => {
       if (typeof eventName === "string" && data) {
         if (
           "from" in data &&
           data.from.source === "channel" &&
-          ceq(this.channel, data.from.channel)
+          data.from.channelId === this.channelId
         ) {
           void this.emit(eventName, data.message);
         }
       }
     });
-    const unsubJoin = this.root.on(joinEventSymbol, (data) => {
-      if (ceq(this.channel, data.channel)) {
+    this.root.on(joinEventSymbol, ([data]) => {
+      if (data.channelId === this.channelId) {
+        this._joined = true;
         this._members = data.members as PresenceMember[];
+        this.channelMeta = data;
         void this.emit(joinEventSymbol, this.members);
       }
     });
-    const unsubMemberAdd = this.root.on(memberJoinEventSymbol, (data) => {
-      if (ceq(this.channel, data.channel)) {
+    this.root.on(memberJoinEventSymbol, (data) => {
+      if (data.channelId === this.channelId) {
         this._members.push(data.member as PresenceMember);
         void this.emit(memberJoinEventSymbol, data.member as PresenceMember);
       }
     });
-    const unsubMemberRemove = this.root.on(memberLeaveEventSymbol, (data) => {
-      if (ceq(this.channel, data.channel)) {
+    this.root.on(memberLeaveEventSymbol, (data) => {
+      if (data.channelId === this.channelId) {
         this._members = this._members.filter((m) => m.id !== data.member.id);
         void this.emit(memberLeaveEventSymbol, data.member as PresenceMember);
       }
     });
-    const unsubLeave = this.root.on(leaveEventSymbol, () => {
-      unsubCount();
-      unsubEvent();
-      unsubJoin();
-      unsubMemberAdd();
-      unsubMemberRemove();
-      unsubLeave();
+    this.root.on(leaveEventSymbol, (data) => {
+      if (data.channelId === this.channelId) {
+        this._joined = false;
+        void this.emit(leaveEventSymbol);
+      }
     });
+  }
+
+  /**
+   * Request stored messages to be transmitted to this client.
+   * @param messageIds The message id or ids to request.
+   */
+  requestStoredMessages(messageIds: string | string[]) {
+    if (!this.existingMessages.length) {
+      return;
+    }
+    this.root.requestStoredMessages(this, messageIds);
   }
 }
 
@@ -346,6 +371,10 @@ export interface SinkrOptions {
    * The Sinkr app to use.
    */
   appId?: string | undefined;
+  /**
+   * How often to ping the server to keep the connection alive.
+   */
+  pingFrequencyMilliseconds?: number | undefined;
 }
 
 function withEnvFallback(
@@ -398,7 +427,10 @@ export function sink(options: SinkrOptions | undefined = {}): SinkrSink {
       }
       parsedUrl.pathname = `/${appId}`;
     }
-    return new BrowserSinker(parsedUrl.toString());
+    return new BrowserSinker(
+      parsedUrl.toString(),
+      options.pingFrequencyMilliseconds,
+    );
   } catch {
     throw new Error("Invalid URL provided for Sinkr!");
   }

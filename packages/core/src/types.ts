@@ -19,10 +19,6 @@ export interface UserInfo {}
  */
 export const initEventSymbol: unique symbol = Symbol("sinkr-init");
 /**
- * Built-in event for updating a channel's connected member count.
- */
-export const countEventSymbol: unique symbol = Symbol("sinkr-count");
-/**
  * Built-in event for a client connecting to a channel.
  */
 export const joinEventSymbol: unique symbol = Symbol("sinkr-join");
@@ -47,11 +43,3 @@ export const connectSymbol: unique symbol = Symbol("sinkr-connect");
  * Built-in event for when the client disconnects from Sinkr.
  */
 export const disconnectSymbol: unique symbol = Symbol("sinkr-disconnect");
-
-/**
- * Type which represents an encryption key to be used to either encrypt or decrypt messages.
- */
-export interface EncryptionInput {
-  keyId: string;
-  key: JsonWebKey | CryptoKey;
-}
