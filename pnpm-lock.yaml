@@ -291,8 +291,8 @@ importers:
   packages/react:
     dependencies:
       '@sinkr/core':
-        specifier: npm:@jsr/sinkr__core@0.8.0
-        version: '@jsr/sinkr__core@0.8.0'
+        specifier: npm:@jsr/sinkr__core@0.9.0
+        version: '@jsr/sinkr__core@0.9.0'
       react:
         specifier: ^19.0.0
         version: 19.0.0
@@ -1776,11 +1776,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
 
-  '@jsr/sinkr__core@0.8.0':
-    resolution: {integrity: sha512-xgB/5u53bBUhHiCDDhgSaXY48C+x/UX4O5m73Mq4NzYvx+KKTQtwKlTkbfZi60D53kimjBSeGsNtoD3Z2Do9pA==, tarball: https://npm.jsr.io/~/11/@jsr/sinkr__core/0.8.0.tgz}
-
-  '@jsr/sinkr__validators@0.4.0':
-    resolution: {integrity: sha512-MwAjzL1at2/0WRGVaN9DrnULNakbCfrj3qMsXlFP1FBHy3DV8ReMhIabjOZQ9d6IXLfz/Pw2uSrckfEOZXLNwQ==, tarball: https://npm.jsr.io/~/11/@jsr/sinkr__validators/0.4.0.tgz}
+  '@jsr/sinkr__core@0.9.0':
+    resolution: {integrity: sha512-2ZdXlpeWp+p5DtFBmNJeXuZrcxlpuPNIjOGfZYBy72xgVuuOr6BuzaloBKKnXu3vgLynr+8jzqJaYuG27ct6lg==, tarball: https://npm.jsr.io/~/11/@jsr/sinkr__core/0.9.0.tgz}
 
   '@jsr/sinkr__validators@0.5.1':
     resolution: {integrity: sha512-/PdkNlTgGfX4tJZD4RIVepFIUvOFSwetOu7YVTMWeEefK9ErbsUrIXMScxAnRUE1LCiIWKZvEEYnJ5eZJ/ul/g==, tarball: https://npm.jsr.io/~/11/@jsr/sinkr__validators/0.5.1.tgz}
@@ -7407,16 +7404,11 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
 
-  '@jsr/sinkr__core@0.8.0':
+  '@jsr/sinkr__core@0.9.0':
     dependencies:
-      '@jsr/sinkr__validators': 0.4.0
-      '@oslojs/encoding': 1.1.0
+      '@jsr/sinkr__validators': 0.5.1
       emittery: 1.1.0
       undici: 7.3.0
-      zod: 3.24.2
-
-  '@jsr/sinkr__validators@0.4.0':
-    dependencies:
       zod: 3.24.2
 
   '@jsr/sinkr__validators@0.5.1':

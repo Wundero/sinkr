@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 
 import type { EventMap, SinkrChannel, SinkrSink } from "@sinkr/core/client";
 import { sink } from "@sinkr/core/client";
@@ -60,9 +60,11 @@ export function SinkrProvider({
  */
 export function useSinkr(): SinkrSink | null {
   const context = React.useContext(SinkrContext);
+
   if (!context) {
     return null;
   }
+
   return context.sink;
 }
 
@@ -76,13 +78,16 @@ export function useSinkrEvent<
   TData extends EventMap[TEvent] = EventMap[TEvent],
 >(event: TEvent, callback: (data: TData) => void) {
   const sinkr = useSinkr();
+
   React.useEffect(() => {
     if (!sinkr) {
       return;
     }
+
     const unsubFn = sinkr.on(event, (data) => {
       callback(data.message as TData);
     });
+
     return () => {
       unsubFn();
     };
@@ -91,40 +96,41 @@ export function useSinkrEvent<
 
 /**
  * Get an event listener for a specific channel.
- * @param channel The channel name.
+ * @param channelId The channel ID.
  */
-export function useSinkrChannel(
-  channel:
-    | string
-    | {
-        name: string;
-        flags: number;
-      },
-): SinkrChannel | null {
+export function useSinkrChannel(channelId: string): SinkrChannel | null {
   const sinkr = useSinkr();
-  return sinkr?.channel(channel) ?? null;
+
+  const channel = useMemo(() => {
+    return sinkr?.channel(channelId) ?? null;
+  }, [channelId, sinkr]);
+
+  return channel;
 }
 
 /**
  * Run a callback whenever the specified event is fired on the specified channel.
- * @param channel The channel name.
+ * @param channelId The channel ID.
  * @param event The event to listen to.
  * @param callback A callback to run when the event is fired.
  */
 export function useSinkrChannelEvent<
   TEvent extends keyof EventMap,
   TData extends EventMap[TEvent] = EventMap[TEvent],
->(channel: string, event: TEvent, callback: (data: TData) => void) {
-  const ch = useSinkrChannel(channel);
+>(channelId: string, event: TEvent, callback: (data: TData) => void) {
+  const channel = useSinkrChannel(channelId);
+
   React.useEffect(() => {
-    if (!ch) {
+    if (!channel) {
       return;
     }
-    const unsubFn = ch.on(event, (data) => {
+
+    const unsubFn = channel.on(event, (data) => {
       callback(data as TData);
     });
+
     return () => {
       unsubFn();
     };
-  }, [ch, event, callback]);
+  }, [channel, event, callback]);
 }
