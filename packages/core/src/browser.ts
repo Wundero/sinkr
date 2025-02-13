@@ -278,14 +278,14 @@ class ChannelSinker extends Emittery<ChannelEventMap> {
   /**
    * The name of this channel. If the channel has not yet been joined, this returns the channel's ID.
    */
-  get name() {
+  get name(): string {
     return this.channelMeta?.channelName ?? this.channelId;
   }
 
   /**
    * Whether the channel is active.
    */
-  get active() {
+  get active(): boolean {
     return this._joined;
   }
 
