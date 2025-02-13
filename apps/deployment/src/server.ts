@@ -1,13 +1,15 @@
 import type { Peer } from "crossws";
 import type { z } from "zod";
+import { UTCDate } from "@date-fns/utc";
 import crossws from "crossws/adapters/cloudflare-durable";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, not } from "drizzle-orm";
 
 import type {
   ClientReceiveSchema,
   ServerEndpointSchema,
 } from "@sinkr/validators";
 
+import { getCoordinator } from ".";
 import {
   channels,
   peerChannelSubscriptions,
@@ -21,8 +23,18 @@ type ServerMessage = z.infer<typeof ServerEndpointSchema>;
 
 type ClientReception = z.infer<typeof ClientReceiveSchema>;
 
+export function getCoordinatorInstance(env: Env) {
+  const coordinatorBinding = env.ObjectCoordinator;
+  const coordinatorId = coordinatorBinding.idFromName("coordinator");
+  const coordinator = coordinatorBinding.get(coordinatorId);
+  return coordinator;
+}
+
 export const ws = crossws({
   hooks,
+  resolveDurableStub(req, $env) {
+    return getCoordinatorInstance($env as Env);
+  },
 });
 
 export function getPeers() {
@@ -47,27 +59,46 @@ export function sendToPeer(peer: Peer, message: ClientReception) {
 }
 
 export async function handleSource(
-  messageId: string,
+  id: string,
   data: ServerMessage,
   appId: string,
-) {
+): Promise<{
+  status: number;
+  data?: unknown;
+}> {
   const db = getDB();
   switch (data.route) {
     case "authenticate": {
+      const coordInst = getCoordinator();
+      if (!coordInst) {
+        return {
+          status: 401,
+        };
+      }
       const peer = await db.query.peers.findFirst({
         where: (p, ops) =>
           ops.and(ops.eq(p.appId, appId), ops.eq(p.id, data.peerId)),
       });
       if (!peer) {
-        return new Response("Not found", { status: 404 });
+        return {
+          status: 404,
+        };
       }
       await db
         .update(peers)
         .set({ userInfo: data.userInfo, authenticatedUserId: data.id })
         .where(eq(peers.id, peer.id));
-      return new Response("OK", { status: 200 });
+      return {
+        status: 200,
+      };
     }
     case "createChannel": {
+      const coordInst = getCoordinator();
+      if (!coordInst) {
+        return {
+          status: 401,
+        };
+      }
       const existing = await db.query.channels.findFirst({
         where: (c, ops) =>
           ops.and(ops.eq(c.appId, appId), ops.eq(c.name, data.name)),
@@ -82,13 +113,14 @@ export async function handleSource(
           .where(eq(channels.id, existing.id))
           .returning();
         if (!updated) {
-          return new Response("Internal server error", {
+          return {
             status: 500,
-          });
+          };
         }
-        return new Response(updated.id, {
+        return {
           status: 200,
-        });
+          data: updated.id,
+        };
       } else {
         const [inserted] = await db
           .insert(channels)
@@ -100,29 +132,46 @@ export async function handleSource(
           })
           .returning();
         if (!inserted) {
-          return new Response("Internal server error", {
+          return {
             status: 500,
-          });
+          };
         }
-        return new Response(inserted.id, {
+        return {
           status: 200,
-        });
+          data: inserted.id,
+        };
       }
     }
     case "deleteChannel": {
+      const coordInst = getCoordinator();
+      if (!coordInst) {
+        return {
+          status: 401,
+        };
+      }
       const channel = await db.query.channels.findFirst({
         where: (c, ops) =>
           ops.and(ops.eq(c.appId, appId), ops.eq(c.id, data.channelId)),
       });
       if (!channel) {
-        return new Response("Not found", { status: 404 });
+        return {
+          status: 404,
+        };
       }
       await db
         .delete(channels)
         .where(and(eq(channels.id, data.channelId), eq(channels.appId, appId)));
-      return new Response("OK", { status: 200 });
+      return {
+        status: 200,
+      };
     }
     case "deleteMessages": {
+      const coordInst = getCoordinator();
+      if (!coordInst) {
+        return {
+          status: 401,
+        };
+      }
       if (data.messageIds?.length) {
         await db
           .delete(storedChannelMessages)
@@ -143,9 +192,19 @@ export async function handleSource(
             ),
           );
       }
-      return new Response("OK", { status: 200 });
+      return {
+        status: 200,
+      };
     }
     case "broadcast": {
+      const coordInst = getCoordinator();
+      if (coordInst) {
+        const res = await coordInst.distribute({ id, appId, data });
+        const maxStatus = res.reduce((a, v) => Math.max(a, v.status), 0);
+        return {
+          status: maxStatus,
+        };
+      }
       const peers = getPeers();
       const dbPeers = await db.query.peers.findMany({
         where: (p, ops) => ops.eq(p.appId, appId),
@@ -155,7 +214,7 @@ export async function handleSource(
       peers.forEach((peer) => {
         if (peerIdSet.has(peer.id)) {
           sendToPeer(peer, {
-            id: messageId,
+            id: id,
             source: "message",
             data: {
               event: data.event,
@@ -167,15 +226,27 @@ export async function handleSource(
           });
         }
       });
-      return new Response("OK", { status: 200 });
+      return {
+        status: 200,
+      };
     }
     case "channel": {
+      const coordInst = getCoordinator();
+      if (coordInst) {
+        const res = await coordInst.distribute({ id, appId, data });
+        const maxStatus = res.reduce((a, v) => Math.max(a, v.status), 0);
+        return {
+          status: maxStatus,
+        };
+      }
       const ch = await db.query.channels.findFirst({
         where: (c, ops) =>
           ops.and(ops.eq(c.id, data.channelId), ops.eq(c.appId, appId)),
       });
       if (!ch) {
-        return new Response("Not found", { status: 404 });
+        return {
+          status: 404,
+        };
       }
       const subscriptions = await db.query.peerChannelSubscriptions.findMany({
         where: (s, ops) =>
@@ -183,7 +254,7 @@ export async function handleSource(
       });
       if (ch.store) {
         await db.insert(storedChannelMessages).values({
-          id: messageId,
+          id: id,
           appId,
           channelId: ch.id,
           data,
@@ -195,7 +266,7 @@ export async function handleSource(
         if (peer) {
           sendToPeer(peer, {
             source: "message",
-            id: messageId,
+            id: id,
             data: {
               event: data.event,
               from: {
@@ -207,9 +278,19 @@ export async function handleSource(
           });
         }
       });
-      return new Response("OK", { status: 200 });
+      return {
+        status: 200,
+      };
     }
     case "direct": {
+      const coordInst = getCoordinator();
+      if (coordInst) {
+        const res = await coordInst.distribute({ id, appId, data });
+        const maxStatus = res.reduce((a, v) => Math.max(a, v.status), 0);
+        return {
+          status: maxStatus,
+        };
+      }
       const dbPeer = await db.query.peers.findFirst({
         where: (p, ops) =>
           ops.and(
@@ -221,15 +302,19 @@ export async function handleSource(
           ),
       });
       if (!dbPeer) {
-        return new Response("Not found", { status: 404 });
+        return {
+          status: 404,
+        };
       }
       const peer = getPeerMap().get(dbPeer.id);
       if (!peer) {
-        return new Response("Not found", { status: 404 });
+        return {
+          status: 404,
+        };
       }
       sendToPeer(peer, {
         source: "message",
-        id: messageId,
+        id: id,
         data: {
           event: data.event,
           from: {
@@ -238,15 +323,29 @@ export async function handleSource(
           message: data.message,
         },
       });
-      return new Response("OK", { status: 200 });
+      return {
+        status: 200,
+      };
     }
     case "subscribe": {
+      const coordInst = getCoordinator();
       const ch = await db.query.channels.findFirst({
         where: (c, ops) =>
           ops.and(ops.eq(c.appId, appId), ops.eq(c.id, data.channelId)),
+        with: {
+          messages: {
+            columns: {
+              id: true,
+              createdAt: true,
+            },
+            orderBy: (m, { asc }) => [asc(m.createdAt)],
+          },
+        },
       });
       if (!ch) {
-        return new Response("Not found", { status: 404 });
+        return {
+          status: 404,
+        };
       }
       const dbPeer = await db.query.peers.findFirst({
         where: (p, ops) =>
@@ -259,11 +358,15 @@ export async function handleSource(
           ),
       });
       if (!dbPeer) {
-        return new Response("Not found", { status: 404 });
+        return {
+          status: 404,
+        };
       }
       if (ch.auth === "public") {
         if (!dbPeer.authenticatedUserId) {
-          return new Response("Unauthorized", { status: 401 });
+          return {
+            status: 401,
+          };
         }
       }
       const existingSubs = await db
@@ -277,22 +380,37 @@ export async function handleSource(
           and(
             eq(peers.appId, appId),
             eq(peerChannelSubscriptions.channelId, ch.id),
+            not(eq(peers.id, dbPeer.id)),
           ),
         );
-      await db.insert(peerChannelSubscriptions).values({
-        appId,
-        peerId: dbPeer.id,
-        channelId: ch.id,
-      });
+      if (coordInst) {
+        await db.insert(peerChannelSubscriptions).values({
+          appId,
+          peerId: dbPeer.id,
+          channelId: ch.id,
+        });
+
+        const res = await coordInst.distribute({ id, appId, data });
+        const maxStatus = res.reduce((a, v) => Math.max(a, v.status), 0);
+        return {
+          status: maxStatus,
+        };
+      }
       const peerMap = getPeerMap();
       const mainPeer = peerMap.get(dbPeer.id);
       if (mainPeer) {
         sendToPeer(mainPeer, {
           source: "metadata",
-          id: messageId,
+          id: id,
           data: {
             event: "join-channel",
             channelId: ch.id,
+            channelAuthMode: ch.auth,
+            channelName: ch.name,
+            channelStoredMessages: ch.messages.map((x) => ({
+              id: x.id,
+              date: new UTCDate(x.createdAt),
+            })),
             members: existingSubs.map((s) => ({
               id: s.peer.authenticatedUserId ?? s.peer.id,
               userInfo: ch.auth === "presence" ? s.peer.userInfo : undefined,
@@ -305,7 +423,7 @@ export async function handleSource(
         if (peer) {
           sendToPeer(peer, {
             source: "metadata",
-            id: messageId,
+            id: id,
             data: {
               event: "member-join",
               channelId: ch.id,
@@ -317,9 +435,21 @@ export async function handleSource(
           });
         }
       });
-      return new Response("OK", { status: 200 });
+      return {
+        status: 200,
+      };
     }
     case "unsubscribe": {
+      const coordInst = getCoordinator();
+      const ch = await db.query.channels.findFirst({
+        where: (c, ops) =>
+          ops.and(ops.eq(c.appId, appId), ops.eq(c.id, data.channelId)),
+      });
+      if (!ch) {
+        return {
+          status: 404,
+        };
+      }
       const dbPeer = await db.query.peers.findFirst({
         where: (p, ops) =>
           ops.and(
@@ -331,29 +461,33 @@ export async function handleSource(
           ),
       });
       if (!dbPeer) {
-        return new Response("Not found", { status: 404 });
+        return {
+          status: 404,
+        };
       }
-      const ch = await db.query.channels.findFirst({
-        where: (c, ops) =>
-          ops.and(ops.eq(c.appId, appId), ops.eq(c.id, data.channelId)),
-      });
-      if (!ch) {
-        return new Response("Not found", { status: 404 });
+      if (coordInst) {
+        const isInChannel = await db.query.peerChannelSubscriptions.findFirst({
+          where: (s, ops) =>
+            ops.and(
+              ops.eq(s.appId, appId),
+              ops.eq(s.peerId, dbPeer.id),
+              ops.eq(s.channelId, ch.id),
+            ),
+        });
+        if (!isInChannel) {
+          return {
+            status: 404,
+          };
+        }
+        await db
+          .delete(peerChannelSubscriptions)
+          .where(eq(peerChannelSubscriptions.id, isInChannel.id));
+        const res = await coordInst.distribute({ id, appId, data });
+        const maxStatus = res.reduce((a, v) => Math.max(a, v.status), 0);
+        return {
+          status: maxStatus,
+        };
       }
-      const isInChannel = await db.query.peerChannelSubscriptions.findFirst({
-        where: (s, ops) =>
-          ops.and(
-            ops.eq(s.appId, appId),
-            ops.eq(s.peerId, dbPeer.id),
-            ops.eq(s.channelId, ch.id),
-          ),
-      });
-      if (!isInChannel) {
-        return new Response("Not found", { status: 404 });
-      }
-      await db
-        .delete(peerChannelSubscriptions)
-        .where(eq(peerChannelSubscriptions.id, isInChannel.id));
       const remainingSubs = await db
         .select({
           peer: peers,
@@ -375,7 +509,7 @@ export async function handleSource(
             event: "leave-channel",
             channelId: ch.id,
           },
-          id: messageId,
+          id: id,
           source: "metadata",
         });
       }
@@ -384,7 +518,7 @@ export async function handleSource(
         if (peer) {
           sendToPeer(peer, {
             source: "metadata",
-            id: messageId,
+            id: id,
             data: {
               event: "member-leave",
               channelId: ch.id,
@@ -396,7 +530,9 @@ export async function handleSource(
           });
         }
       });
-      return new Response("OK", { status: 200 });
+      return {
+        status: 200,
+      };
     }
   }
 }

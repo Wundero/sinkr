@@ -15,7 +15,21 @@ export const ChannelMemberSchema = z.object({
 export const ClientJoinChannelSchema = z.object({
   event: z.literal("join-channel"),
   channelId: z.string(),
+  channelName: z.string(),
+  channelAuthMode: z.enum(["public", "private", "presence"]),
+  channelStoredMessages: z.array(
+    z.object({
+      id: z.string(),
+      date: z.date(),
+    }),
+  ),
   members: z.array(ChannelMemberSchema),
+});
+
+export const ClientRequestStoredMessagesSchema = z.object({
+  event: z.literal("request-stored-messages"),
+  channelId: z.string(),
+  messageIds: z.array(z.string()),
 });
 
 export const ClientLeaveChannelSchema = z.object({

@@ -12,12 +12,21 @@ routes = [
 enabled = true
 
 [[durable_objects.bindings]]
-name = "$DurableObject"
-class_name = "$DurableObject"
+name = "SocketHandler"
+class_name = "SocketHandler"
+
+[[durable_objects.bindings]]
+name = "ObjectCoordinator"
+class_name = "ObjectCoordinator"
 
 [[migrations]]
 tag = "v1"
 new_classes = ["$DurableObject"]
+
+[[migrations]]
+tag = "v2"
+renamed_classes = [{ from = "$DurableObject", to = "SocketHandler" }]
+new_sqlite_classes = ["ObjectCoordinator"]
 
 [[d1_databases]]
 binding = "DATABASE"

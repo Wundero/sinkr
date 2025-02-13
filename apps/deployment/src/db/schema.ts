@@ -1,4 +1,5 @@
-import { relations } from "drizzle-orm";
+import type { z } from "zod";
+import { relations, sql } from "drizzle-orm";
 import {
   blob,
   index,
@@ -8,6 +9,8 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 import { v7 } from "uuid";
+
+import type { ChannelMessageSchema } from "@sinkr/validators";
 
 export const apps = sqliteTable(
   "app",
@@ -154,7 +157,12 @@ export const storedChannelMessages = sqliteTable(
       .references(() => channels.id, {
         onDelete: "cascade",
       }),
-    data: blob().notNull(),
+    createdAt: text()
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    data: blob({ mode: "json" })
+      .$type<z.infer<typeof ChannelMessageSchema>>()
+      .notNull(),
   },
   (storedChannelMessage) => [
     index("scm_appIdx").on(storedChannelMessage.appId),

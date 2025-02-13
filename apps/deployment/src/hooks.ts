@@ -2,7 +2,10 @@ import type { Hooks } from "crossws";
 import { eq } from "drizzle-orm";
 import { v7 } from "uuid";
 
-import { ServerEndpointSchema } from "@sinkr/validators";
+import {
+  ClientRequestStoredMessagesSchema,
+  ServerEndpointSchema,
+} from "@sinkr/validators";
 
 import { peers } from "./db/schema";
 import { getPeerMap, handleSource, sendToPeer } from "./server";
@@ -32,6 +35,37 @@ export const hooks = {
     const peerInfo = await db.query.peers.findFirst({
       where: (p, ops) => ops.eq(p.id, peer.id),
     });
+    if (peerInfo?.type === "sink") {
+      const body = message.json();
+      const parsed = ClientRequestStoredMessagesSchema.safeParse(body);
+      if (!parsed.success) {
+        return;
+      }
+      const messages = await db.query.storedChannelMessages.findMany({
+        where: (m, ops) =>
+          ops.and(
+            ops.eq(m.channelId, parsed.data.channelId),
+            ops.eq(m.appId, peerInfo.appId),
+            ops.inArray(m.id, parsed.data.messageIds),
+          ),
+        orderBy: (m, { asc }) => [asc(m.createdAt)],
+      });
+      for (const message of messages) {
+        sendToPeer(peer, {
+          id: message.id,
+          source: "message",
+          data: {
+            event: message.data.event,
+            from: {
+              channelId: message.data.channelId,
+              source: "channel",
+            },
+            message: message.data.message,
+          },
+        });
+      }
+      return;
+    }
     if (peerInfo?.type !== "source") {
       return;
     }
@@ -52,6 +86,7 @@ export const hooks = {
     peer.send({
       status: res.status,
       id: body.id,
+      data: res.data,
     });
   },
   async close(peer) {
@@ -100,8 +135,7 @@ export const hooks = {
   async open(peer) {
     console.log(`ON OPEN: ${peer.id}`);
     try {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const url = new URL(peer.request!.url!);
+      const url = new URL(peer.request.url);
       const [_, appId] = url.pathname.split("/");
       if (!appId) {
         peer.close(4000, "Invalid application");

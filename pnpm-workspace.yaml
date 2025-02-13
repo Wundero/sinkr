@@ -9,7 +9,7 @@ catalog:
   typescript: ^5.7.2
   eslint: ^9.15.0
   prettier: ^3.4.1
-  crossws: ^0.3.1
+  crossws: ^0.3.4
   emittery: ^1.0.3
   undici: ^7.0.0
 

@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   blob,
   index,
@@ -154,7 +154,10 @@ export const storedChannelMessages = sqliteTable(
       .references(() => channels.id, {
         onDelete: "cascade",
       }),
-    data: blob().notNull(),
+    createdAt: text()
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    data: blob({ mode: "json" }).notNull(),
   },
   (storedChannelMessage) => [
     index("scm_appIdx").on(storedChannelMessage.appId),
