@@ -6,7 +6,9 @@ import { and, eq, inArray, not } from "drizzle-orm";
 
 import type {
   ClientReceiveSchema,
-  ServerEndpointSchema,
+  RouteRequestSchema,
+  RouteResponseSchema,
+  ServerRoute,
 } from "@sinkr/validators";
 
 import { getCoordinator } from ".";
@@ -18,8 +20,6 @@ import {
 } from "./db/schema";
 import { hooks } from "./hooks";
 import { getDB } from "./utils";
-
-type ServerMessage = z.infer<typeof ServerEndpointSchema>;
 
 type ClientReception = z.infer<typeof ClientReceiveSchema>;
 
@@ -58,21 +58,20 @@ export function sendToPeer(peer: Peer, message: ClientReception) {
   peer.send(message);
 }
 
-export async function handleSource(
+export async function handleSource<TRoute extends ServerRoute>(
   id: string,
-  data: ServerMessage,
+  input: RouteRequestSchema<TRoute>,
   appId: string,
-): Promise<{
-  status: number;
-  data?: unknown;
-}> {
+): Promise<RouteResponseSchema<TRoute>["response"]> {
   const db = getDB();
-  switch (data.route) {
-    case "authenticate": {
+  const { route, request: data } = input;
+  switch (route) {
+    case "user.authenticate": {
       const coordInst = getCoordinator();
       if (!coordInst) {
         return {
-          status: 401,
+          success: false,
+          error: "Invalid connection",
         };
       }
       const peer = await db.query.peers.findFirst({
@@ -81,7 +80,8 @@ export async function handleSource(
       });
       if (!peer) {
         return {
-          status: 404,
+          success: false,
+          error: "Peer not found",
         };
       }
       await db
@@ -89,14 +89,15 @@ export async function handleSource(
         .set({ userInfo: data.userInfo, authenticatedUserId: data.id })
         .where(eq(peers.id, peer.id));
       return {
-        status: 200,
+        success: true,
       };
     }
-    case "createChannel": {
+    case "channel.create": {
       const coordInst = getCoordinator();
       if (!coordInst) {
         return {
-          status: 401,
+          success: false,
+          error: "Invalid connection",
         };
       }
       const existing = await db.query.channels.findFirst({
@@ -114,12 +115,13 @@ export async function handleSource(
           .returning();
         if (!updated) {
           return {
-            status: 500,
+            success: false,
+            error: "Unknown error",
           };
         }
         return {
-          status: 200,
-          data: updated.id,
+          success: true,
+          channelId: updated.id,
         };
       } else {
         const [inserted] = await db
@@ -133,20 +135,22 @@ export async function handleSource(
           .returning();
         if (!inserted) {
           return {
-            status: 500,
+            success: false,
+            error: "Unknown error",
           };
         }
         return {
-          status: 200,
-          data: inserted.id,
+          success: true,
+          channelId: inserted.id,
         };
       }
     }
-    case "deleteChannel": {
+    case "channel.delete": {
       const coordInst = getCoordinator();
       if (!coordInst) {
         return {
-          status: 401,
+          success: false,
+          error: "Invalid connection",
         };
       }
       const channel = await db.query.channels.findFirst({
@@ -155,21 +159,23 @@ export async function handleSource(
       });
       if (!channel) {
         return {
-          status: 404,
+          success: false,
+          error: "Channel not found",
         };
       }
       await db
         .delete(channels)
         .where(and(eq(channels.id, data.channelId), eq(channels.appId, appId)));
       return {
-        status: 200,
+        success: true,
       };
     }
-    case "deleteMessages": {
+    case "channel.messages.delete": {
       const coordInst = getCoordinator();
       if (!coordInst) {
         return {
-          status: 401,
+          success: false,
+          error: "Invalid connection",
         };
       }
       if (data.messageIds?.length) {
@@ -193,17 +199,28 @@ export async function handleSource(
           );
       }
       return {
-        status: 200,
+        success: true,
       };
     }
-    case "broadcast": {
+    case "global.messages.send": {
       const coordInst = getCoordinator();
       if (coordInst) {
-        const res = await coordInst.distribute({ id, appId, data });
-        const maxStatus = res.reduce((a, v) => Math.max(a, v.status), 0);
-        return {
-          status: maxStatus,
-        };
+        const res = await coordInst.distribute({
+          id,
+          appId,
+          data: input,
+        });
+        const success = res.every((r) => r.success);
+        if (success) {
+          return {
+            success,
+          };
+        } else {
+          return {
+            success,
+            error: "Invalid request",
+          };
+        }
       }
       const peers = getPeers();
       const dbPeers = await db.query.peers.findMany({
@@ -227,16 +244,20 @@ export async function handleSource(
         }
       });
       return {
-        status: 200,
+        success: true,
       };
     }
-    case "channel": {
+    case "channel.messages.send": {
       const coordInst = getCoordinator();
       if (coordInst) {
-        const res = await coordInst.distribute({ id, appId, data });
-        const maxStatus = res.reduce((a, v) => Math.max(a, v.status), 0);
+        const res = await coordInst.distribute({ id, appId, data: input });
+        const success = res.every((r) => r.success);
+        if (success) {
+          return { success };
+        }
         return {
-          status: maxStatus,
+          success,
+          error: "Invalid request",
         };
       }
       const ch = await db.query.channels.findFirst({
@@ -245,7 +266,8 @@ export async function handleSource(
       });
       if (!ch) {
         return {
-          status: 404,
+          success: false,
+          error: "Channel not found",
         };
       }
       const subscriptions = await db.query.peerChannelSubscriptions.findMany({
@@ -279,16 +301,20 @@ export async function handleSource(
         }
       });
       return {
-        status: 200,
+        success: true,
       };
     }
-    case "direct": {
+    case "user.messages.send": {
       const coordInst = getCoordinator();
       if (coordInst) {
-        const res = await coordInst.distribute({ id, appId, data });
-        const maxStatus = res.reduce((a, v) => Math.max(a, v.status), 0);
+        const res = await coordInst.distribute({ id, appId, data: input });
+        const success = res.some((r) => r.success);
+        if (success) {
+          return { success };
+        }
         return {
-          status: maxStatus,
+          success,
+          error: "Peer not found",
         };
       }
       const dbPeer = await db.query.peers.findFirst({
@@ -303,13 +329,15 @@ export async function handleSource(
       });
       if (!dbPeer) {
         return {
-          status: 404,
+          success: false,
+          error: "Peer not found",
         };
       }
       const peer = getPeerMap().get(dbPeer.id);
       if (!peer) {
         return {
-          status: 404,
+          success: false,
+          error: "Peer not found",
         };
       }
       sendToPeer(peer, {
@@ -324,10 +352,10 @@ export async function handleSource(
         },
       });
       return {
-        status: 200,
+        success: true,
       };
     }
-    case "subscribe": {
+    case "channel.subscribers.add": {
       const coordInst = getCoordinator();
       const ch = await db.query.channels.findFirst({
         where: (c, ops) =>
@@ -344,7 +372,8 @@ export async function handleSource(
       });
       if (!ch) {
         return {
-          status: 404,
+          success: false,
+          error: "Channel not found",
         };
       }
       const dbPeer = await db.query.peers.findFirst({
@@ -359,13 +388,15 @@ export async function handleSource(
       });
       if (!dbPeer) {
         return {
-          status: 404,
+          success: false,
+          error: "Peer not found",
         };
       }
       if (ch.auth === "public") {
         if (!dbPeer.authenticatedUserId) {
           return {
-            status: 401,
+            success: false,
+            error: "Peer not authenticated",
           };
         }
       }
@@ -390,10 +421,14 @@ export async function handleSource(
           channelId: ch.id,
         });
 
-        const res = await coordInst.distribute({ id, appId, data });
-        const maxStatus = res.reduce((a, v) => Math.max(a, v.status), 0);
+        const res = await coordInst.distribute({ id, appId, data: input });
+        const success = res.every((r) => r.success);
+        if (success) {
+          return { success };
+        }
         return {
-          status: maxStatus,
+          success,
+          error: "Invalid request",
         };
       }
       const peerMap = getPeerMap();
@@ -436,10 +471,10 @@ export async function handleSource(
         }
       });
       return {
-        status: 200,
+        success: true,
       };
     }
-    case "unsubscribe": {
+    case "channel.subscribers.remove": {
       const coordInst = getCoordinator();
       const ch = await db.query.channels.findFirst({
         where: (c, ops) =>
@@ -447,7 +482,8 @@ export async function handleSource(
       });
       if (!ch) {
         return {
-          status: 404,
+          success: false,
+          error: "Channel not found",
         };
       }
       const dbPeer = await db.query.peers.findFirst({
@@ -462,7 +498,8 @@ export async function handleSource(
       });
       if (!dbPeer) {
         return {
-          status: 404,
+          success: false,
+          error: "Peer not found",
         };
       }
       if (coordInst) {
@@ -476,16 +513,21 @@ export async function handleSource(
         });
         if (!isInChannel) {
           return {
-            status: 404,
+            success: false,
+            error: "Peer is not subscribed to channel",
           };
         }
         await db
           .delete(peerChannelSubscriptions)
           .where(eq(peerChannelSubscriptions.id, isInChannel.id));
-        const res = await coordInst.distribute({ id, appId, data });
-        const maxStatus = res.reduce((a, v) => Math.max(a, v.status), 0);
+        const res = await coordInst.distribute({ id, appId, data: input });
+        const success = res.every((r) => r.success);
+        if (success) {
+          return { success };
+        }
         return {
-          status: maxStatus,
+          success,
+          error: "Invalid request",
         };
       }
       const remainingSubs = await db
@@ -531,7 +573,7 @@ export async function handleSource(
         }
       });
       return {
-        status: 200,
+        success: true,
       };
     }
   }

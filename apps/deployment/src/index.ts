@@ -1,8 +1,12 @@
 import { AsyncLocalStorage } from "async_hooks";
-import type { z } from "zod";
 import { DurableObject } from "cloudflare:workers";
 
-import { ServerEndpointSchema } from "@sinkr/validators";
+import type {
+  RouteRequestSchema,
+  RouteResponseSchema,
+  ServerRoute,
+} from "@sinkr/validators";
+import { ServerRequestSchema } from "@sinkr/validators";
 
 import { getCoordinatorInstance, getPeers, handleSource, ws } from "./server";
 import { getDB, init } from "./utils";
@@ -45,18 +49,17 @@ export class ObjectCoordinator extends DurableObject<Env> {
     return obj;
   }
 
-  async distribute({
+  async distribute<TRoute extends ServerRoute>({
     id,
     appId,
     data,
   }: {
     id: string;
     appId: string;
-    data: z.infer<typeof ServerEndpointSchema>;
-  }) {
+    data: RouteRequestSchema<TRoute>;
+  }): Promise<({ id: string } & RouteResponseSchema<TRoute>["response"])[]> {
     const cursor = this.sql.exec<{ id: string }>("SELECT id FROM handler;");
-    const promises: Promise<{ status: number; data?: unknown; id: string }>[] =
-      [];
+    const promises = [];
     for (const { id: handlerId } of cursor) {
       const handler = this.getBinding(handlerId);
       promises.push(handler.process({ id, appId, data }));
@@ -143,9 +146,15 @@ export class ObjectCoordinator extends DurableObject<Env> {
           id: string;
         };
         const { data: body, id } = bodyBuf;
-        const parsed = ServerEndpointSchema.safeParse(body);
-        if (!parsed.success) {
-          return new Response("Invalid request", { status: 400 });
+        const parsed = ServerRequestSchema.safeParse(body);
+        if (!parsed.success || "response" in parsed.data) {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: "Invalid request",
+            }),
+            { status: 400 },
+          );
         }
         const data = parsed.data;
         const info = await handleSource(id, data, appId);
@@ -155,7 +164,7 @@ export class ObjectCoordinator extends DurableObject<Env> {
             ...info,
           }),
           {
-            status: info.status,
+            status: info.success ? 200 : 400,
           },
         );
       }
@@ -204,16 +213,16 @@ export class SocketHandler extends DurableObject<Env> {
     await this.coordinator.updateConnections(this.ctx.id.toString(), conns);
   }
 
-  async process({
+  async process<TRoute extends ServerRoute>({
     id,
     data,
     appId,
   }: {
     id: string;
     appId: string;
-    data: z.infer<typeof ServerEndpointSchema>;
-  }) {
-    const info = await handleSource(id, data, appId);
+    data: RouteRequestSchema<TRoute>;
+  }): Promise<RouteResponseSchema<TRoute>["response"] & { id: string }> {
+    const info = await handleSource<TRoute>(id, data, appId);
     return {
       id,
       ...info,
@@ -260,14 +269,20 @@ export class SocketHandler extends DurableObject<Env> {
       id: string;
     };
     const { data: body, id } = bodyBuf;
-    const parsed = ServerEndpointSchema.safeParse(body);
+    const parsed = ServerRequestSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response("Invalid request", { status: 400 });
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Invalid request",
+        }),
+        { status: 400 },
+      );
     }
     const data = parsed.data;
     const info = await this.process({ id, data, appId });
     return new Response(JSON.stringify(info), {
-      status: info.status,
+      status: info.success ? 200 : 400,
     });
   }
 

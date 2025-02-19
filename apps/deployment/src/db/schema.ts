@@ -10,7 +10,7 @@ import {
 } from "drizzle-orm/sqlite-core";
 import { v7 } from "uuid";
 
-import type { ChannelMessageSchema } from "@sinkr/validators";
+import type { ChannelMessagesSendRequestSchema } from "@sinkr/validators";
 
 export const apps = sqliteTable(
   "app",
@@ -161,7 +161,7 @@ export const storedChannelMessages = sqliteTable(
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
     data: blob({ mode: "json" })
-      .$type<z.infer<typeof ChannelMessageSchema>>()
+      .$type<z.infer<typeof ChannelMessagesSendRequestSchema>["request"]>()
       .notNull(),
   },
   (storedChannelMessage) => [

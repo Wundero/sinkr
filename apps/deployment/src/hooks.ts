@@ -4,7 +4,7 @@ import { v7 } from "uuid";
 
 import {
   ClientRequestStoredMessagesSchema,
-  ServerEndpointSchema,
+  ServerRequestSchema,
 } from "@sinkr/validators";
 
 import { peers } from "./db/schema";
@@ -73,7 +73,7 @@ export const hooks = {
       data: unknown;
       id: string;
     }>();
-    const parsed = ServerEndpointSchema.safeParse(body.data);
+    const parsed = ServerRequestSchema.safeParse(body.data);
     if (!parsed.success) {
       peer.send({
         status: 400,
@@ -84,9 +84,8 @@ export const hooks = {
     }
     const res = await handleSource(body.id, parsed.data, peerInfo.appId);
     peer.send({
-      status: res.status,
       id: body.id,
-      data: res.data,
+      ...res,
     });
   },
   async close(peer) {
