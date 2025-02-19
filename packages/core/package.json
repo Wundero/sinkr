@@ -1,6 +1,6 @@
 {
   "name": "@sinkr/core",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "type": "module",
   "main": "src/index.ts",
   "exports": {
@@ -19,7 +19,7 @@
     "@sinkr/eslint-config": "workspace:*",
     "@sinkr/prettier-config": "workspace:*",
     "@sinkr/tsconfig": "workspace:*",
-    "@types/node": "^22.13.2",
+    "@types/node": "^22.13.4",
     "eslint": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:"
@@ -27,7 +27,7 @@
   "prettier": "@sinkr/prettier-config",
   "dependencies": {
     "@oslojs/encoding": "^1.1.0",
-    "@sinkr/validators": "npm:@jsr/sinkr__validators@0.5.1",
+    "@sinkr/validators": "npm:@jsr/sinkr__validators@0.6.0",
     "emittery": "^1.1.0",
     "undici": "^7.3.0",
     "zod": "^3.24.2"

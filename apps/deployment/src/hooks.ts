@@ -85,7 +85,8 @@ export const hooks = {
     const res = await handleSource(body.id, parsed.data, peerInfo.appId);
     peer.send({
       id: body.id,
-      ...res,
+      route: parsed.data.route,
+      response: res,
     });
   },
   async close(peer) {

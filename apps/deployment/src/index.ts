@@ -57,7 +57,7 @@ export class ObjectCoordinator extends DurableObject<Env> {
     id: string;
     appId: string;
     data: RouteRequestSchema<TRoute>;
-  }): Promise<({ id: string } & RouteResponseSchema<TRoute>["response"])[]> {
+  }): Promise<({ id: string } & RouteResponseSchema<TRoute>)[]> {
     const cursor = this.sql.exec<{ id: string }>("SELECT id FROM handler;");
     const promises = [];
     for (const { id: handlerId } of cursor) {
@@ -161,7 +161,8 @@ export class ObjectCoordinator extends DurableObject<Env> {
         return new Response(
           JSON.stringify({
             id,
-            ...info,
+            route: data.route,
+            response: info,
           }),
           {
             status: info.success ? 200 : 400,
@@ -221,12 +222,13 @@ export class SocketHandler extends DurableObject<Env> {
     id: string;
     appId: string;
     data: RouteRequestSchema<TRoute>;
-  }): Promise<RouteResponseSchema<TRoute>["response"] & { id: string }> {
+  }): Promise<RouteResponseSchema<TRoute> & { id: string }> {
     const info = await handleSource<TRoute>(id, data, appId);
     return {
       id,
-      ...info,
-    };
+      route: data.route,
+      response: info,
+    } as RouteResponseSchema<TRoute> & { id: string };
   }
 
   async fetch(request: Request) {
@@ -282,7 +284,7 @@ export class SocketHandler extends DurableObject<Env> {
     const data = parsed.data;
     const info = await this.process({ id, data, appId });
     return new Response(JSON.stringify(info), {
-      status: info.success ? 200 : 400,
+      status: info.response.success ? 200 : 400,
     });
   }
 

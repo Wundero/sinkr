@@ -4,13 +4,19 @@ import { fetch, WebSocket } from "undici";
 
 import type {
   MessageTypeSchema,
-  ServerEndpointSchema,
+  RouteRequestSchema,
+  RouteResponseSchema,
+  ServerRoute,
 } from "@sinkr/validators";
+import { ServerResponseSchema } from "@sinkr/validators";
 
 import type { RealEventMap } from "./event-fallback";
 import type { UserInfo } from "./types";
 
-type SendDataParam = z.infer<typeof ServerEndpointSchema>;
+interface OmitSuccess<TRoute extends ServerRoute> {
+  route: TRoute;
+  response: Exclude<RouteResponseSchema<TRoute>["response"], { success: true }>;
+}
 
 function unknownAsyncIterableToReadableStream<T>(
   input: AsyncIterable<T>,
@@ -85,14 +91,14 @@ function toReadableStream<T>(input: ReadableInput<T>): ReadableStream<T> {
   return input;
 }
 
-function prepareStream(shape: object, stream: ReadableStream<unknown>) {
+function prepareStream<TOut>(
+  shapeFn: (message: z.infer<typeof MessageTypeSchema>) => TOut,
+  stream: ReadableStream<unknown>,
+) {
   let index = 0;
-  const transformer = new TransformStream<unknown, object>({
+  const transformer = new TransformStream<unknown, TOut>({
     transform(chunk, controller) {
-      controller.enqueue({
-        ...shape,
-        message: getMessageContent(chunk, index),
-      });
+      controller.enqueue(shapeFn(getMessageContent(chunk, index)));
       index++;
     },
   });
@@ -152,46 +158,45 @@ class Source {
     return this.wsClient;
   }
 
-  async sendData<TData extends SendDataParam>(
-    data: TData,
-  ): Promise<{
-    status: number;
-    data?: unknown;
-  }>;
-  async sendData<TData extends SendDataParam>(
-    data: TData extends { message: unknown } ? Omit<TData, "message"> : TData,
+  async sendData<TRoute extends ServerRoute>(
+    route: TRoute,
+    data: RouteRequestSchema<TRoute>["request"],
+  ): Promise<RouteResponseSchema<TRoute>>;
+  async sendData<TRoute extends ServerRoute>(
+    route: TRoute,
+    data: RouteRequestSchema<TRoute>["request"] extends { message: unknown }
+      ? Omit<RouteRequestSchema<TRoute>["request"], "message">
+      : RouteRequestSchema<TRoute>["request"],
     iterable: ReadableInput<unknown>,
-  ): Promise<
-    {
-      status: number;
-      data?: unknown;
-    }[]
-  >;
-  async sendData<TData extends SendDataParam>(
-    data: TData,
+  ): Promise<RouteResponseSchema<TRoute>[]>;
+  async sendData<TRoute extends ServerRoute>(
+    route: TRoute,
+    data: RouteRequestSchema<TRoute>["request"],
     iterable?: ReadableInput<unknown>,
   ) {
     if (iterable) {
       const stream = toReadableStream(iterable);
-      const encodedStream = prepareStream(data, stream);
+      const encodedStream = prepareStream(
+        (message) => ({
+          route,
+          request: {
+            ...data,
+            message,
+          },
+        }),
+        stream,
+      );
       const ws = await this.connectWS();
       const reader = encodedStream.getReader();
-      const statuses = new Map<
-        string,
-        {
-          status: number;
-          data?: unknown;
-        }
-      >();
+      const statuses = new Map<string, RouteResponseSchema<TRoute>>();
       const ids: string[] = [];
       const onMsg = (ev: MessageEvent) => {
         const data = JSON.parse(ev.data as string) as {
-          status: number;
           id: string;
-          data?: unknown;
         };
-        if (ids.includes(data.id)) {
-          statuses.set(data.id, data);
+        const parsed = ServerResponseSchema.safeParse(data);
+        if (ids.includes(data.id) && parsed.success) {
+          statuses.set(data.id, parsed.data);
         }
         return;
       };
@@ -203,7 +208,8 @@ class Source {
           return ids.map(
             (id) =>
               statuses.get(id) ?? {
-                status: 500,
+                success: false,
+                error: "Unknown error",
               },
           );
         }
@@ -219,19 +225,15 @@ class Source {
     } else {
       const id = crypto.randomUUID();
       if (this.wsClient && this.wsClient.readyState === WebSocket.OPEN) {
-        return new Promise<{
-          status: number;
-          data?: unknown;
-        }>((res) => {
+        return new Promise<RouteResponseSchema<TRoute>>((res) => {
           const onMsg = (ev: MessageEvent) => {
             const data = JSON.parse(ev.data as string) as {
-              status: number;
               id: string;
-              data?: unknown;
             };
-            if (data.id === id) {
+            const parsed = ServerResponseSchema.safeParse(data);
+            if (data.id === id && parsed.success) {
               this.wsClient?.removeEventListener("message", onMsg);
-              res(data);
+              res(parsed.data);
             }
           };
           this.wsClient?.addEventListener("message", onMsg);
@@ -251,11 +253,15 @@ class Source {
           Authorization: `Bearer ${this.appKey}`,
         },
       });
-      const dataOut = (await res.json()) as {
-        status: number;
-        data?: unknown;
+      const dataOut = await res.json();
+      const parsed = ServerResponseSchema.safeParse(dataOut);
+      if (parsed.success) {
+        return parsed.data;
+      }
+      return {
+        success: false,
+        error: "Unknown error",
       };
-      return dataOut;
     }
   }
 }
@@ -270,13 +276,10 @@ class SinkrChannel {
    * Delete this channel.
    * @returns The HTTP status code Sinkr returned.
    */
-  async delete(): Promise<number> {
-    return (
-      await this.source.sendData({
-        route: "deleteChannel",
-        channelId: this.channelId,
-      })
-    ).status;
+  async delete(): Promise<RouteResponseSchema<"channel.delete">> {
+    return await this.source.sendData("channel.delete", {
+      channelId: this.channelId,
+    });
   }
 
   /**
@@ -284,14 +287,13 @@ class SinkrChannel {
    * @param messageIds The ids of the messages to delete. Undefined or an empty array will delete **all** messages.
    * @returns The HTTP status code Sinkr returned.
    */
-  async deleteMessages(messageIds?: string[]): Promise<number> {
-    return (
-      await this.source.sendData({
-        route: "deleteMessages",
-        channelId: this.channelId,
-        messageIds,
-      })
-    ).status;
+  async deleteMessages(
+    messageIds?: string[],
+  ): Promise<RouteResponseSchema<"channel.messages.delete">> {
+    return await this.source.sendData("channel.messages.delete", {
+      channelId: this.channelId,
+      messageIds,
+    });
   }
 
   /**
@@ -299,14 +301,13 @@ class SinkrChannel {
    * @param userId The ID to subscribe. This can either be a peer ID or, for authenticated users, the user ID.
    * @returns The HTTP status code Sinkr returned.
    */
-  async subscribe(userId: string): Promise<number> {
-    return (
-      await this.source.sendData({
-        route: "subscribe",
-        subscriberId: userId,
-        channelId: this.channelId,
-      })
-    ).status;
+  async subscribe(
+    userId: string,
+  ): Promise<RouteResponseSchema<"channel.subscribers.add">> {
+    return await this.source.sendData("channel.subscribers.add", {
+      subscriberId: userId,
+      channelId: this.channelId,
+    });
   }
 
   /**
@@ -314,14 +315,13 @@ class SinkrChannel {
    * @param userId The ID to unsubscribe. This can either be a peer ID or, for authenticated users, the user ID.
    * @returns The HTTP status code Sinkr returned.
    */
-  async unsubscribe(userId: string): Promise<number> {
-    return (
-      await this.source.sendData({
-        route: "unsubscribe",
-        subscriberId: userId,
-        channelId: this.channelId,
-      })
-    ).status;
+  async unsubscribe(
+    userId: string,
+  ): Promise<RouteResponseSchema<"channel.subscribers.remove">> {
+    return await this.source.sendData("channel.subscribers.remove", {
+      subscriberId: userId,
+      channelId: this.channelId,
+    });
   }
 
   /**
@@ -333,15 +333,15 @@ class SinkrChannel {
   async sendMessage<
     TEvent extends keyof RealEventMap,
     TData extends RealEventMap[TEvent],
-  >(event: TEvent, message: TData): Promise<number> {
-    return (
-      await this.source.sendData({
-        route: "channel",
-        channelId: this.channelId,
-        event: `${event}`,
-        message: getMessageContent(message),
-      })
-    ).status;
+  >(
+    event: TEvent,
+    message: TData,
+  ): Promise<RouteResponseSchema<"channel.messages.send">> {
+    return await this.source.sendData("channel.messages.send", {
+      channelId: this.channelId,
+      event: `${event}`,
+      message: getMessageContent(message),
+    });
   }
 
   /**
@@ -353,17 +353,18 @@ class SinkrChannel {
   async streamMessages<
     TEvent extends keyof RealEventMap,
     TData extends RealEventMap[TEvent],
-  >(event: TEvent, data: ReadableInput<TData>): Promise<number[]> {
-    return (
-      await this.source.sendData(
-        {
-          route: "channel",
-          channelId: this.channelId,
-          event: `${event}`,
-        },
-        data,
-      )
-    ).map((x) => x.status);
+  >(
+    event: TEvent,
+    data: ReadableInput<TData>,
+  ): Promise<RouteResponseSchema<"channel.messages.send">[]> {
+    return await this.source.sendData(
+      "channel.messages.send",
+      {
+        channelId: this.channelId,
+        event: `${event}`,
+      },
+      data,
+    );
   }
 }
 
@@ -382,15 +383,12 @@ class SinkrSource {
       id: string;
       userInfo: UserInfo;
     },
-  ): Promise<number> {
-    return (
-      await this.source.sendData({
-        route: "authenticate",
-        id: userInfo.id,
-        peerId,
-        userInfo: userInfo.userInfo,
-      })
-    ).status;
+  ): Promise<RouteResponseSchema<"user.authenticate">> {
+    return await this.source.sendData("user.authenticate", {
+      id: userInfo.id,
+      peerId,
+      userInfo: userInfo.userInfo,
+    });
   }
 
   /**
@@ -404,21 +402,16 @@ class SinkrSource {
     name: string,
     authMode: "public" | "private" | "presence",
     storeMessages = false,
-  ): Promise<number | SinkrChannel> {
-    const res = await this.source.sendData({
-      route: "createChannel",
+  ): Promise<OmitSuccess<"channel.create"> | SinkrChannel> {
+    const res = await this.source.sendData("channel.create", {
       authMode,
       storeMessages,
       name,
     });
-    if (res.status !== 200) {
-      return res.status;
+    if (res.response.success) {
+      return new SinkrChannel(this.source, res.response.channelId);
     }
-    if (!res.data) {
-      return 500;
-    }
-    const cid = res.data as string;
-    return new SinkrChannel(this.source, cid);
+    return res as OmitSuccess<"channel.create">;
   }
 
   /**
@@ -426,16 +419,15 @@ class SinkrSource {
    * @param channel The channel to delete.
    * @returns The HTTP status code Sinkr returned.
    */
-  async deleteChannel(channel: string | SinkrChannel): Promise<number> {
+  async deleteChannel(
+    channel: string | SinkrChannel,
+  ): Promise<RouteResponseSchema<"channel.delete">> {
     if (channel instanceof SinkrChannel) {
       return channel.delete();
     }
-    return (
-      await this.source.sendData({
-        route: "deleteChannel",
-        channelId: channel,
-      })
-    ).status;
+    return await this.source.sendData("channel.delete", {
+      channelId: channel,
+    });
   }
 
   /**
@@ -447,17 +439,14 @@ class SinkrSource {
   async deleteChannelMessages(
     channel: string | SinkrChannel,
     messageIds?: string[],
-  ): Promise<number> {
+  ): Promise<RouteResponseSchema<"channel.messages.delete">> {
     if (channel instanceof SinkrChannel) {
       return channel.deleteMessages(messageIds);
     }
-    return (
-      await this.source.sendData({
-        route: "deleteMessages",
-        channelId: channel,
-        messageIds,
-      })
-    ).status;
+    return await this.source.sendData("channel.messages.delete", {
+      channelId: channel,
+      messageIds,
+    });
   }
 
   /**
@@ -469,17 +458,14 @@ class SinkrSource {
   async subscribeToChannel(
     userId: string,
     channel: string | SinkrChannel,
-  ): Promise<number> {
+  ): Promise<RouteResponseSchema<"channel.subscribers.add">> {
     if (channel instanceof SinkrChannel) {
       return channel.subscribe(userId);
     }
-    return (
-      await this.source.sendData({
-        route: "subscribe",
-        subscriberId: userId,
-        channelId: channel,
-      })
-    ).status;
+    return await this.source.sendData("channel.subscribers.add", {
+      subscriberId: userId,
+      channelId: channel,
+    });
   }
 
   /**
@@ -491,17 +477,14 @@ class SinkrSource {
   async unsubscribeFromChannel(
     userId: string,
     channel: string | SinkrChannel,
-  ): Promise<number> {
+  ): Promise<RouteResponseSchema<"channel.subscribers.remove">> {
     if (channel instanceof SinkrChannel) {
       return channel.unsubscribe(userId);
     }
-    return (
-      await this.source.sendData({
-        route: "unsubscribe",
-        subscriberId: userId,
-        channelId: channel,
-      })
-    ).status;
+    return await this.source.sendData("channel.subscribers.remove", {
+      subscriberId: userId,
+      channelId: channel,
+    });
   }
 
   /**
@@ -518,18 +501,15 @@ class SinkrSource {
     channel: string | SinkrChannel,
     event: TEvent,
     message: TData,
-  ): Promise<number> {
+  ): Promise<RouteResponseSchema<"channel.messages.send">> {
     if (channel instanceof SinkrChannel) {
       return channel.sendMessage(event, message);
     }
-    return (
-      await this.source.sendData({
-        route: "channel",
-        channelId: channel,
-        event: `${event}`,
-        message: getMessageContent(message),
-      })
-    ).status;
+    return await this.source.sendData("channel.messages.send", {
+      channelId: channel,
+      event: `${event}`,
+      message: getMessageContent(message),
+    });
   }
 
   /**
@@ -546,20 +526,18 @@ class SinkrSource {
     channel: string | SinkrChannel,
     event: TEvent,
     data: ReadableInput<TData>,
-  ): Promise<number[]> {
+  ): Promise<RouteResponseSchema<"channel.messages.send">[]> {
     if (channel instanceof SinkrChannel) {
       return channel.streamMessages(event, data);
     }
-    return (
-      await this.source.sendData(
-        {
-          route: "channel",
-          channelId: channel,
-          event: `${event}`,
-        },
-        data,
-      )
-    ).map((x) => x.status);
+    return await this.source.sendData(
+      "channel.messages.send",
+      {
+        channelId: channel,
+        event: `${event}`,
+      },
+      data,
+    );
   }
 
   /**
@@ -572,15 +550,16 @@ class SinkrSource {
   async directMessage<
     TEvent extends keyof RealEventMap,
     TData extends RealEventMap[TEvent],
-  >(userId: string, event: TEvent, message: TData): Promise<number> {
-    return (
-      await this.source.sendData({
-        route: "direct",
-        recipientId: userId,
-        event: `${event}`,
-        message: getMessageContent(message),
-      })
-    ).status;
+  >(
+    userId: string,
+    event: TEvent,
+    message: TData,
+  ): Promise<RouteResponseSchema<"user.messages.send">> {
+    return await this.source.sendData("user.messages.send", {
+      recipientId: userId,
+      event: `${event}`,
+      message: getMessageContent(message),
+    });
   }
 
   /**
@@ -597,17 +576,15 @@ class SinkrSource {
     userId: string,
     event: TEvent,
     data: ReadableInput<TData>,
-  ): Promise<number[]> {
-    return (
-      await this.source.sendData(
-        {
-          route: "direct",
-          recipientId: userId,
-          event: `${event}`,
-        },
-        data,
-      )
-    ).map((r) => r.status);
+  ): Promise<RouteResponseSchema<"user.messages.send">[]> {
+    return await this.source.sendData(
+      "user.messages.send",
+      {
+        recipientId: userId,
+        event: `${event}`,
+      },
+      data,
+    );
   }
 
   /**
@@ -619,14 +596,14 @@ class SinkrSource {
   async broadcastMessage<
     TEvent extends keyof RealEventMap,
     TData extends RealEventMap[TEvent],
-  >(event: TEvent, message: TData): Promise<number> {
-    return (
-      await this.source.sendData({
-        route: "broadcast",
-        event: `${event}`,
-        message: getMessageContent(message),
-      })
-    ).status;
+  >(
+    event: TEvent,
+    message: TData,
+  ): Promise<RouteResponseSchema<"global.messages.send">> {
+    return await this.source.sendData("global.messages.send", {
+      event: `${event}`,
+      message: getMessageContent(message),
+    });
   }
 
   /**
@@ -638,16 +615,17 @@ class SinkrSource {
   async streamBroadcastMessage<
     TEvent extends keyof RealEventMap,
     TData extends RealEventMap[TEvent],
-  >(event: TEvent, data: ReadableInput<TData>): Promise<number[]> {
-    return (
-      await this.source.sendData(
-        {
-          route: "broadcast",
-          event: `${event}`,
-        },
-        data,
-      )
-    ).map((r) => r.status);
+  >(
+    event: TEvent,
+    data: ReadableInput<TData>,
+  ): Promise<RouteResponseSchema<"global.messages.send">[]> {
+    return await this.source.sendData(
+      "global.messages.send",
+      {
+        event: `${event}`,
+      },
+      data,
+    );
   }
 }
 

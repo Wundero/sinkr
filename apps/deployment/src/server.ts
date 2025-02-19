@@ -210,7 +210,7 @@ export async function handleSource<TRoute extends ServerRoute>(
           appId,
           data: input,
         });
-        const success = res.every((r) => r.success);
+        const success = res.every((r) => r.response.success);
         if (success) {
           return {
             success,
@@ -251,7 +251,7 @@ export async function handleSource<TRoute extends ServerRoute>(
       const coordInst = getCoordinator();
       if (coordInst) {
         const res = await coordInst.distribute({ id, appId, data: input });
-        const success = res.every((r) => r.success);
+        const success = res.every((r) => r.response.success);
         if (success) {
           return { success };
         }
@@ -308,7 +308,7 @@ export async function handleSource<TRoute extends ServerRoute>(
       const coordInst = getCoordinator();
       if (coordInst) {
         const res = await coordInst.distribute({ id, appId, data: input });
-        const success = res.some((r) => r.success);
+        const success = res.some((r) => r.response.success);
         if (success) {
           return { success };
         }
@@ -422,7 +422,7 @@ export async function handleSource<TRoute extends ServerRoute>(
         });
 
         const res = await coordInst.distribute({ id, appId, data: input });
-        const success = res.every((r) => r.success);
+        const success = res.every((r) => r.response.success);
         if (success) {
           return { success };
         }
@@ -521,7 +521,7 @@ export async function handleSource<TRoute extends ServerRoute>(
           .delete(peerChannelSubscriptions)
           .where(eq(peerChannelSubscriptions.id, isInChannel.id));
         const res = await coordInst.distribute({ id, appId, data: input });
-        const success = res.every((r) => r.success);
+        const success = res.every((r) => r.response.success);
         if (success) {
           return { success };
         }

@@ -31,7 +31,7 @@ importers:
         version: link:tooling/prettier
       '@turbo/gen':
         specifier: ^2.3.3
-        version: 2.3.3(@types/node@22.13.2)(typescript@5.7.2)
+        version: 2.3.3(@types/node@22.13.4)(typescript@5.7.2)
       prettier:
         specifier: 'catalog:'
         version: 3.4.1
@@ -254,8 +254,8 @@ importers:
         specifier: ^1.1.0
         version: 1.1.0
       '@sinkr/validators':
-        specifier: npm:@jsr/sinkr__validators@0.5.1
-        version: '@jsr/sinkr__validators@0.5.1'
+        specifier: npm:@jsr/sinkr__validators@0.6.0
+        version: '@jsr/sinkr__validators@0.6.0'
       emittery:
         specifier: ^1.1.0
         version: 1.1.0
@@ -276,8 +276,8 @@ importers:
         specifier: workspace:*
         version: link:../../tooling/typescript
       '@types/node':
-        specifier: ^22.13.2
-        version: 22.13.2
+        specifier: ^22.13.4
+        version: 22.13.4
       eslint:
         specifier: 'catalog:'
         version: 9.16.0(jiti@2.4.2)
@@ -1782,6 +1782,9 @@ packages:
   '@jsr/sinkr__validators@0.5.1':
     resolution: {integrity: sha512-/PdkNlTgGfX4tJZD4RIVepFIUvOFSwetOu7YVTMWeEefK9ErbsUrIXMScxAnRUE1LCiIWKZvEEYnJ5eZJ/ul/g==, tarball: https://npm.jsr.io/~/11/@jsr/sinkr__validators/0.5.1.tgz}
 
+  '@jsr/sinkr__validators@0.6.0':
+    resolution: {integrity: sha512-O7fUOq62ZBXa3WaDKKXHkwl2rIUGUggr406vB/FkN0j0rAKbdP+C48xx+RPznzLJGUPQ28dy9KSHAiQn3I5P/g==, tarball: https://npm.jsr.io/~/11/@jsr/sinkr__validators/0.6.0.tgz}
+
   '@miniflare/core@2.14.4':
     resolution: {integrity: sha512-FMmZcC1f54YpF4pDWPtdQPIO8NXfgUxCoR9uyrhxKJdZu7M6n8QKopPVNuaxR40jcsdxb7yKoQoFWnHfzJD9GQ==}
     engines: {node: '>=16.13'}
@@ -2761,8 +2764,8 @@ packages:
   '@types/node@22.10.1':
     resolution: {integrity: sha512-qKgsUwfHZV2WCWLAnVP1JqnpE6Im6h3Y0+fYgMTasNQ7V++CBX5OT1as0g0f+OyubbFqhf6XVNIsmN4IIhEgGQ==}
 
-  '@types/node@22.13.2':
-    resolution: {integrity: sha512-Z+r8y3XL9ZpI2EY52YYygAFmo2/oWfNSj4BCpAXE2McAexDk8VcnBMGC9Djn9gTKt4d2T/hhXqmPzo4hfIXtTg==}
+  '@types/node@22.13.4':
+    resolution: {integrity: sha512-ywP2X0DYtX3y08eFVx5fNIw7/uIv8hYUKgXoK8oayJlLnKcRfEYCxWMVE1XagUdVtCJlZT1AU4LXEABW+L1Peg==}
 
   '@types/prop-types@15.7.13':
     resolution: {integrity: sha512-hCZTSvwbzWGvhqxp/RqVqwU999pBf2vp7hzIjiYOsl8wqOmUxkQ6ddw1cV3l8811+kdUFus/q4d1Y3E3SyEifA==}
@@ -7415,6 +7418,10 @@ snapshots:
     dependencies:
       zod: 3.24.2
 
+  '@jsr/sinkr__validators@0.6.0':
+    dependencies:
+      zod: 3.24.2
+
   '@miniflare/core@2.14.4':
     dependencies:
       '@iarna/toml': 2.2.5
@@ -8549,7 +8556,7 @@ snapshots:
 
   '@tsconfig/node18@1.0.3': {}
 
-  '@turbo/gen@2.3.3(@types/node@22.13.2)(typescript@5.7.2)':
+  '@turbo/gen@2.3.3(@types/node@22.13.4)(typescript@5.7.2)':
     dependencies:
       '@turbo/workspaces': 2.3.3
       commander: 10.0.1
@@ -8559,7 +8566,7 @@ snapshots:
       node-plop: 0.26.3
       picocolors: 1.0.1
       proxy-agent: 6.4.0
-      ts-node: 10.9.2(@types/node@22.13.2)(typescript@5.7.2)
+      ts-node: 10.9.2(@types/node@22.13.4)(typescript@5.7.2)
       update-check: 1.5.4
       validate-npm-package-name: 5.0.1
     transitivePeerDependencies:
@@ -8585,7 +8592,7 @@ snapshots:
 
   '@types/better-sqlite3@7.6.12':
     dependencies:
-      '@types/node': 22.13.2
+      '@types/node': 22.13.4
 
   '@types/cookie@0.6.0': {}
 
@@ -8603,7 +8610,7 @@ snapshots:
   '@types/glob@7.2.0':
     dependencies:
       '@types/minimatch': 5.1.2
-      '@types/node': 22.13.2
+      '@types/node': 22.13.4
 
   '@types/inquirer@6.5.0':
     dependencies:
@@ -8620,7 +8627,7 @@ snapshots:
     dependencies:
       undici-types: 6.20.0
 
-  '@types/node@22.13.2':
+  '@types/node@22.13.4':
     dependencies:
       undici-types: 6.20.0
 
@@ -8643,7 +8650,7 @@ snapshots:
 
   '@types/through@0.0.33':
     dependencies:
-      '@types/node': 22.13.2
+      '@types/node': 22.13.4
 
   '@types/tinycolor2@1.4.6': {}
 
@@ -11405,14 +11412,14 @@ snapshots:
     dependencies:
       typescript: 5.7.2
 
-  ts-node@10.9.2(@types/node@22.13.2)(typescript@5.7.2):
+  ts-node@10.9.2(@types/node@22.13.4)(typescript@5.7.2):
     dependencies:
       '@cspotcode/source-map-support': 0.8.1
       '@tsconfig/node10': 1.0.11
       '@tsconfig/node12': 1.0.11
       '@tsconfig/node14': 1.0.3
       '@tsconfig/node16': 1.0.4
-      '@types/node': 22.13.2
+      '@types/node': 22.13.4
       acorn: 8.14.0
       acorn-walk: 8.3.4
       arg: 4.1.3
