@@ -10,7 +10,11 @@ import type {
   MemberJoinChannelSchema,
   MemberLeaveChannelSchema,
 } from "@sinkr/validators";
-import { ClientReceiveSchema } from "@sinkr/validators";
+import {
+  ClientReceiveSchema,
+  SINKR_SCHEMA_HEADER,
+  SINKR_SCHEMA_VERSION,
+} from "@sinkr/validators";
 
 import type { RealEventMap } from "./event-fallback";
 import type { UserInfo } from "./types";
@@ -153,6 +157,7 @@ class BrowserSinker extends Emittery<EventMapWithDefaults> {
     }
     this.ws = new WebSocket(this.url);
     this.ws.addEventListener("open", () => {
+      this.ws?.send(`${SINKR_SCHEMA_HEADER}${SINKR_SCHEMA_VERSION}`);
       void this.emit(connectSymbol);
     });
     this.ws.addEventListener("message", (event) => {

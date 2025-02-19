@@ -78,14 +78,6 @@ export class ObjectCoordinator extends DurableObject<Env> {
   }
 
   async fetch(request: Request) {
-    const schemaVersion = parseInt(
-      request.headers.get(SINKR_SCHEMA_HEADER) ?? "-1",
-    );
-    if (schemaVersion !== SUPPORTED_SCHEMA_VERSION) {
-      return new Response("Invalid protocol version", {
-        status: 400,
-      });
-    }
     return coordinatorCtx.run(this, async () => {
       if (request.headers.get("Upgrade") === "websocket") {
         const reqUrl = new URL(request.url);
@@ -124,6 +116,15 @@ export class ObjectCoordinator extends DurableObject<Env> {
         const bound = binding.get(id);
         this.handlerCache.set(id.toString(), bound);
         return bound.fetch(request);
+      }
+
+      const schemaVersion = parseInt(
+        request.headers.get(SINKR_SCHEMA_HEADER) ?? "-1",
+      );
+      if (schemaVersion !== SUPPORTED_SCHEMA_VERSION) {
+        return new Response("Invalid protocol version", {
+          status: 400,
+        });
       }
 
       if (request.method === "POST") {
@@ -244,17 +245,17 @@ export class SocketHandler extends DurableObject<Env> {
   async fetch(request: Request) {
     console.log("On durable object fetch");
 
+    if (request.headers.get("Upgrade") === "websocket") {
+      const res = await ws.handleDurableUpgrade(this, request);
+      this.ctx.waitUntil(this.updateCoordinator());
+      return res;
+    }
+
     const schemaVersion = parseInt(
       request.headers.get(SINKR_SCHEMA_HEADER) ?? "-1",
     );
     if (schemaVersion !== SUPPORTED_SCHEMA_VERSION) {
       return new Response("Invalid protocol version", { status: 400 });
-    }
-
-    if (request.headers.get("Upgrade") === "websocket") {
-      const res = await ws.handleDurableUpgrade(this, request);
-      this.ctx.waitUntil(this.updateCoordinator());
-      return res;
     }
 
     const reqUrl = new URL(request.url);

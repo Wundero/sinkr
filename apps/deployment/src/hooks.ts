@@ -5,8 +5,10 @@ import { v7 } from "uuid";
 import {
   ClientRequestStoredMessagesSchema,
   ServerRequestSchema,
+  SINKR_SCHEMA_HEADER,
 } from "@sinkr/validators";
 
+import { SUPPORTED_SCHEMA_VERSION } from ".";
 import { peers } from "./db/schema";
 import { getPeerMap, handleSource, sendToPeer } from "./server";
 import { getDB } from "./utils";
@@ -27,8 +29,23 @@ export const hooks = {
     }
   },
   async message(peer, message) {
-    if (message.text() === "ping") {
+    const messageText = message.text();
+    if (messageText === "ping") {
       peer.send("pong");
+      return;
+    }
+    if (messageText.startsWith(SINKR_SCHEMA_HEADER)) {
+      const rest = parseInt(messageText.substring(SINKR_SCHEMA_HEADER.length));
+      if (rest !== SUPPORTED_SCHEMA_VERSION) {
+        peer.close(1003);
+        return;
+      }
+    }
+    let body;
+    try {
+      body = JSON.parse(messageText) as unknown;
+    } catch {
+      peer.close(1003);
       return;
     }
     const db = getDB();
@@ -36,7 +53,6 @@ export const hooks = {
       where: (p, ops) => ops.eq(p.id, peer.id),
     });
     if (peerInfo?.type === "sink") {
-      const body = message.json();
       const parsed = ClientRequestStoredMessagesSchema.safeParse(body);
       if (!parsed.success) {
         return;
@@ -69,10 +85,10 @@ export const hooks = {
     if (peerInfo?.type !== "source") {
       return;
     }
-    const body = message.json<{
+    body = body as {
       data: unknown;
       id: string;
-    }>();
+    };
     const parsed = ServerRequestSchema.safeParse(body.data);
     if (!parsed.success) {
       peer.send({

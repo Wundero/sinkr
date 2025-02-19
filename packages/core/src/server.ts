@@ -8,7 +8,11 @@ import type {
   RouteResponseSchema,
   ServerRoute,
 } from "@sinkr/validators";
-import { ServerResponseSchema } from "@sinkr/validators";
+import {
+  ServerResponseSchema,
+  SINKR_SCHEMA_HEADER,
+  SINKR_SCHEMA_VERSION,
+} from "@sinkr/validators";
 
 import type { RealEventMap } from "./event-fallback";
 import type { UserInfo } from "./types";
@@ -148,12 +152,18 @@ class Source {
   }
 
   private async connectWS() {
-    this.wsClient ??= new WebSocket(this.wsUrl.toString());
+    if (this.wsClient) {
+      return this.wsClient;
+    }
+    this.wsClient = new WebSocket(this.wsUrl.toString());
     await new Promise((res) => {
-      this.wsClient?.addEventListener("open", res);
-    });
-    this.wsClient.addEventListener("close", () => {
-      this.wsClient = undefined;
+      this.wsClient?.addEventListener("open", () => {
+        this.wsClient?.send(`${SINKR_SCHEMA_HEADER}${SINKR_SCHEMA_VERSION}`);
+        res(true);
+      });
+      this.wsClient?.addEventListener("close", () => {
+        this.wsClient = undefined;
+      });
     });
     return this.wsClient;
   }
@@ -251,6 +261,7 @@ class Source {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${this.appKey}`,
+          [SINKR_SCHEMA_HEADER]: `${SINKR_SCHEMA_VERSION}`,
         },
       });
       const dataOut = await res.json();
