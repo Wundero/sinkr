@@ -6,12 +6,14 @@ import type {
   RouteResponseSchema,
   ServerRoute,
 } from "@sinkr/validators";
-import { ServerRequestSchema } from "@sinkr/validators";
+import { ServerRequestSchema, SINKR_SCHEMA_HEADER } from "@sinkr/validators";
 
 import { getCoordinatorInstance, getPeers, handleSource, ws } from "./server";
 import { getDB, init } from "./utils";
 
 export const MAX_CONNECTIONS_PER_OBJECT = 500;
+
+export const SUPPORTED_SCHEMA_VERSION = 0;
 
 const coordinatorCtx = new AsyncLocalStorage<ObjectCoordinator>();
 
@@ -76,6 +78,14 @@ export class ObjectCoordinator extends DurableObject<Env> {
   }
 
   async fetch(request: Request) {
+    const schemaVersion = parseInt(
+      request.headers.get(SINKR_SCHEMA_HEADER) ?? "-1",
+    );
+    if (schemaVersion !== SUPPORTED_SCHEMA_VERSION) {
+      return new Response("Invalid protocol version", {
+        status: 400,
+      });
+    }
     return coordinatorCtx.run(this, async () => {
       if (request.headers.get("Upgrade") === "websocket") {
         const reqUrl = new URL(request.url);
@@ -233,6 +243,13 @@ export class SocketHandler extends DurableObject<Env> {
 
   async fetch(request: Request) {
     console.log("On durable object fetch");
+
+    const schemaVersion = parseInt(
+      request.headers.get(SINKR_SCHEMA_HEADER) ?? "-1",
+    );
+    if (schemaVersion !== SUPPORTED_SCHEMA_VERSION) {
+      return new Response("Invalid protocol version", { status: 400 });
+    }
 
     if (request.headers.get("Upgrade") === "websocket") {
       const res = await ws.handleDurableUpgrade(this, request);
